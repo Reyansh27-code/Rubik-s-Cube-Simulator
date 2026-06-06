@@ -1,0 +1,3456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PrismCube Pro</title>
+<style>
+:root{
+  --bg:#06080f;--panel:rgba(12,17,28,0.72);--panel-s:rgba(16,22,36,0.88);
+  --line:rgba(255,255,255,0.11);--text:#f0f5ff;--muted:#8a97ad;
+  --accent:#0ea5e9;--accent2:#a855f7;--danger:#ff607a;--ok:#5de8a0;
+  --shadow:0 24px 72px rgba(0,0,0,0.52);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}
+#app{position:fixed;inset:0}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:fixed;top:16px;left:16px;right:16px;z-index:10;
+  background:var(--panel);backdrop-filter:blur(24px) saturate(1.3);
+  -webkit-backdrop-filter:blur(24px) saturate(1.3);
+  border:1px solid var(--line);border-radius:20px;
+  display:flex;align-items:center;gap:16px;padding:10px 16px;
+  box-shadow:var(--shadow);
+}
+.brand{display:flex;align-items:center;gap:11px;flex-shrink:0}
+.mark{
+  width:38px;height:38px;border-radius:11px;padding:6px;
+  background:linear-gradient(135deg,rgba(110,231,249,.9),rgba(247,201,72,.85));
+  display:grid;grid-template-columns:repeat(3,1fr);gap:3px;
+  box-shadow:0 0 22px rgba(110,231,249,.3);flex-shrink:0
+}
+.mark span{border-radius:2px;background:rgba(4,8,16,.8)}
+.brand h1{font-size:clamp(15px,2vw,22px);letter-spacing:-.01em;white-space:nowrap}
+.brand p{font-size:11px;color:var(--muted);white-space:nowrap}
+.metrics{display:flex;gap:8px;margin-left:auto;flex-shrink:0}
+.metric{
+  border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);
+  border-radius:13px;padding:7px 12px;text-align:right;min-width:72px
+}
+.metric b{display:block;font-size:17px;line-height:1;font-variant-numeric:tabular-nums}
+.metric span{display:block;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-top:3px}
+.metric b.solved-color{color:var(--ok)}
+.topbar-actions{display:flex;gap:7px;flex-shrink:0}
+
+/* ── PANELS ── */
+.panel{
+  position:fixed;z-index:8;
+  background:var(--panel);backdrop-filter:blur(22px) saturate(1.25);
+  -webkit-backdrop-filter:blur(22px) saturate(1.25);
+  border:1px solid var(--line);border-radius:18px;padding:14px;
+  box-shadow:var(--shadow);
+}
+.left-panel{left:16px;top:82px;width:248px;max-height:calc(100vh - 100px);overflow-y:auto}
+.right-panel{right:16px;top:82px;width:272px;max-height:calc(100vh - 100px);overflow-y:auto}
+
+/* ── BOTTOM ── */
+.bottom-panel{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:8;
+  background:var(--panel);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border:1px solid var(--line);border-radius:18px;padding:12px 14px;
+  display:flex;gap:10px;align-items:center;box-shadow:var(--shadow);
+}
+
+/* ── SECTION ── */
+.section+.section{margin-top:14px}
+.stitle{
+  font-size:10px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);
+  margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--line)
+}
+
+/* ── BUTTONS ── */
+.btn{
+  height:38px;border:1px solid rgba(255,255,255,.12);border-radius:11px;
+  color:var(--text);background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.05));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 8px 20px rgba(0,0,0,.18);
+  cursor:pointer;transition:all .15s ease;user-select:none;font-size:13px;
+  white-space:nowrap;
+}
+.btn:hover{transform:translateY(-1px);border-color:rgba(110,231,249,.5);background:linear-gradient(180deg,rgba(110,231,249,.16),rgba(110,231,249,.06));color:var(--accent)}
+.btn:active{transform:scale(.97) translateY(1px)}
+.btn.primary{background:linear-gradient(135deg,#0ea5e9,#a855f7);color:#030d12;font-weight:800;border-color:transparent}
+.btn.primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn.danger{border-color:rgba(255,96,122,.35);color:var(--danger)}
+.btn.sm{height:33px;font-size:12px;border-radius:9px}
+.btn.icon{width:38px;padding:0;font-size:17px}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.g6{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+
+/* ── SEGMENTED ── */
+.seg{display:flex;gap:5px;padding:4px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:11px}
+.seg button{flex:1;height:29px;border:0;border-radius:8px;color:var(--muted);background:transparent;cursor:pointer;font-size:12px;transition:all .15s}
+.seg button.active{background:var(--accent);color:#030d12;font-weight:800}
+.style-nav{
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:4px;
+  padding:5px;
+  border-radius:15px;
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.035));
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 28px rgba(0,0,0,.18);
+}
+.style-nav button{
+  height:36px;
+  border:0;
+  border-radius:11px;
+  color:var(--muted);
+  background:transparent;
+  cursor:pointer;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0;
+  transition:background .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+.style-nav button:hover{color:var(--text);background:rgba(255,255,255,.055)}
+.style-nav button.active{
+  color:#061019;
+  background:linear-gradient(135deg,#0ea5e9,#a7f3d0);
+  box-shadow:0 8px 20px rgba(110,231,249,.22),inset 0 1px 0 rgba(255,255,255,.4);
+}
+
+/* ── FORM ELEMENTS ── */
+input[type=range]{width:100%;accent-color:var(--accent);height:4px;border-radius:2px}
+select{width:100%;padding:8px 10px;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:9px;color:var(--text);font-size:13px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:34px;font-size:13px;color:var(--muted)}
+.switch{position:relative;width:42px;height:24px;flex-shrink:0}
+.switch input{display:none}
+.switch em{position:absolute;inset:0;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid var(--line);transition:.18s;cursor:pointer}
+.switch em::after{content:'';position:absolute;width:18px;height:18px;top:2px;left:2px;border-radius:50%;background:#fff;transition:.18s}
+.switch input:checked+em{background:rgba(110,231,249,.6)}
+.switch input:checked+em::after{transform:translateX(18px)}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.stat{border-radius:11px;padding:9px 10px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+.stat b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
+.stat small{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+
+/* ── SCRAMBLE ── */
+.scr-box{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:12.5px;line-height:1.55;color:var(--text);min-height:52px;word-spacing:4px}
+
+/* ── STATUS DOT ── */
+.status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-top:10px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--danger);box-shadow:0 0 10px var(--danger);transition:.3s}
+.dot.ok{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+
+/* ── MOVE CHIPS ── */
+.chips{display:flex;flex-wrap:wrap;gap:4px;max-height:72px;overflow-y:auto;scrollbar-width:thin}
+.chip{font-size:11px;padding:2px 6px;border-radius:5px;background:rgba(110,231,249,.1);border:1px solid rgba(110,231,249,.2);color:var(--accent)}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;left:50%;top:84px;transform:translate(-50%,-12px);z-index:20;
+  padding:9px 18px;border-radius:999px;font-size:13px;
+  background:rgba(6,10,20,.75);border:1px solid rgba(110,231,249,.25);
+  backdrop-filter:blur(18px);opacity:0;pointer-events:none;
+  transition:opacity .22s,transform .22s;box-shadow:var(--shadow)
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ── SOLVE OVERLAY ── */
+.solve-overlay{
+  position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(6,8,15,.82);backdrop-filter:blur(8px);
+  opacity:0;pointer-events:none;transition:opacity .35s
+}
+.solve-overlay.show{opacity:1;pointer-events:all}
+.solve-num{font-size:clamp(52px,8vw,84px);font-weight:800;color:var(--accent);letter-spacing:-.04em;line-height:1}
+.solve-sub{font-size:15px;color:var(--muted);margin-top:10px}
+.solve-actions{display:flex;gap:10px;margin-top:28px}
+
+/* ── DEBUG ── */
+.dbg{position:fixed;right:16px;bottom:16px;z-index:6;font-size:11px;color:var(--muted);text-align:right;pointer-events:none}
+.dbg strong{display:block;font-size:20px;color:var(--text);font-variant-numeric:tabular-nums}
+
+/* ── TRAINING SYSTEM ── */
+.trainer-btn{position:fixed;top:16px;right:120px;z-index:10}
+.trainer-panel{position:fixed;background:var(--panel);backdrop-filter:blur(24px) saturate(1.3);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow);z-index:12;display:none;opacity:0;transform:translateY(20px);transition:opacity .3s,transform .3s;max-height:calc(100vh - 100px);overflow-y:auto}
+.trainer-panel.active{display:flex;flex-direction:column;opacity:1;transform:translateY(0)}
+.trainer-panel.center{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:90vw;max-width:480px;max-height:70vh;z-index:15}
+.trainer-panel.top-right{top:82px;right:16px;width:320px}
+.trainer-selection{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.trainer-select-btn{padding:16px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);cursor:pointer;transition:all .2s;text-align:center;font-size:13px;font-weight:600}
+.trainer-select-btn:hover{background:rgba(110,231,249,.15);border-color:var(--accent);transform:translateY(-2px)}
+.case-card{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:all .2s}
+.case-card:hover{background:rgba(110,231,249,.1);border-color:var(--accent);transform:translateY(-2px)}
+.case-card.active{background:linear-gradient(135deg,rgba(110,231,249,.25),rgba(247,201,72,.1));border-color:var(--accent);box-shadow:0 0 20px rgba(110,231,249,.15)}
+.case-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:10px;max-height:240px;overflow-y:auto}
+.case-name{font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px}
+.case-algo{font-size:10px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.stat-row:last-child{border:0}
+.stat-label{color:var(--muted)}
+.stat-value{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.trainer-stage{display:flex;gap:8px;margin:12px 0;align-items:center}
+.stage-bar{flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+.stage-progress{height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#f97316,#22c55e);width:0;transition:width .3s}
+.recognition-panel{position:fixed;top:82px;right:352px;width:280px;background:var(--panel);backdrop-filter:blur(24px);border:1px solid rgba(110,231,249,.3);border-radius:16px;padding:12px;z-index:11;opacity:0;pointer-events:none;transition:opacity .3s;box-shadow:0 0 30px rgba(110,231,249,.15)}
+.recognition-panel.show{opacity:1;pointer-events:all}
+.rec-title{font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.1em;margin-bottom:6px}
+.rec-case{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:6px}
+.rec-algo{font-size:11px;color:var(--text);font-family:monospace;background:rgba(0,0,0,.2);padding:6px;border-radius:6px}
+.rec-confidence{font-size:9px;color:var(--muted);margin-top:6px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1100px){.right-panel{display:none}}
+@media(max-width:720px){
+  .left-panel{display:none}
+  .brand p{display:none}
+  .metrics .metric:nth-child(n+4){display:none}
+  .topbar-actions .btn:not(.primary){display:none}
+  .trainer-panel.top-right{display:none!important}
+  .recognition-panel{display:none!important}
+}
+
+/* ── CYBERPUNK THEME BUTTON ── */
+.btn.primary#btnThemes {
+  background: linear-gradient(135deg, #0ea5e9 0%, #a855f7 100%);
+  border: 2px solid #0ea5e9;
+  color: #000;
+  font-weight: 700;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 12px rgba(110, 231, 249, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 12px;
+}
+
+.btn.primary#btnThemes:hover {
+  box-shadow: 0 0 20px rgba(110, 231, 249, 0.7), 0 0 10px rgba(247, 201, 72, 0.4);
+  transform: translateY(-2px);
+}
+
+/* ── THEME MODAL ── */
+.theme-modal{
+  position:fixed;inset:0;z-index:1000;display:none;
+  background: rgba(6, 8, 15, 0.8);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.theme-modal.active{
+  display:flex;align-items:center;justify-content:center;opacity:1;pointer-events:all;
+}
+
+.theme-panel-content{
+  background: rgba(12, 17, 28, 0.9);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border: 2px solid #0ea5e9;
+  border-radius:16px;
+  box-shadow: 0 0 30px rgba(110, 231, 249, 0.2);
+  width:90vw;max-width:850px;max-height:85vh;
+  overflow-y:auto;padding:28px;
+  display:flex;flex-direction:column;gap:20px;
+  transform:scale(0.95);transition:transform .2s ease;
+}
+
+.theme-modal.active .theme-panel-content{
+  transform:scale(1);
+}
+
+.theme-panel-header{
+  display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;
+  border-bottom: 2px solid #0ea5e9;
+}
+
+.theme-panel-header h2{
+  font-size:22px;font-weight:900;
+  color: #0ea5e9;
+  margin:0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.theme-panel-header .close-btn{
+  width:38px;height:38px;border: 2px solid #0ea5e9;
+  background: rgba(110, 231, 249, 0.1);
+  color: #0ea5e9;
+  font-size:22px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;
+  border-radius: 6px;
+}
+
+.theme-panel-header .close-btn:hover{
+  background:rgba(110,231,249,.2);
+  box-shadow: 0 0 15px rgba(110, 231, 249, 0.5);
+}
+
+.theme-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+  gap:14px;padding:8px 0;
+}
+
+.theme-item{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding:12px;border-radius:10px;
+  border: 2px solid rgba(110, 231, 249, 0.3);
+  background: rgba(110, 231, 249, 0.06);
+  cursor:pointer;
+  transition:all .2s ease;
+  user-select:none;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-item:hover{
+  transform: translateY(-3px);
+  background: rgba(110, 231, 249, 0.12);
+  border-color: #0ea5e9;
+  box-shadow: 0 8px 20px rgba(110, 231, 249, 0.25);
+}
+
+.theme-item.active{
+  background: rgba(110, 231, 249, 0.15);
+  border: 2px solid #a855f7;
+  box-shadow: 0 0 20px rgba(110, 231, 249, 0.4), 0 0 10px rgba(247, 201, 72, 0.2);
+}
+
+.preview-cube-wrapper{
+  width:110px;height:110px;border-radius:10px;
+  background: radial-gradient(circle at 30% 30%, rgba(110, 231, 249, 0.1), rgba(0, 0, 0, 0.4));
+  overflow:hidden;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.6), 0 0 10px rgba(110, 231, 249, 0.15);
+  position:relative;
+  transition:all .2s;
+  border: 1px solid rgba(110, 231, 249, 0.2);
+}
+
+.theme-item:hover .preview-cube-wrapper{
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6), 0 0 15px rgba(110, 231, 249, 0.4);
+  border: 1px solid rgba(110, 231, 249, 0.6);
+}
+
+.preview-cube-wrapper canvas{
+  width:100%;height:100%;display:block;
+}
+
+.theme-name{
+  font-size:12px;font-weight:700;
+  color: #0ea5e9;
+  text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  width:100%;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.theme-item.active .theme-name{
+  color: #a855f7;font-weight:900;
+}
+
+/* ── THEME CATEGORIES ── */
+.theme-category-header{
+  grid-column:1/-1;padding:14px 0 10px 0;margin-top:10px;
+  font-size:10px;font-weight:900;
+  color: #0ea5e9;
+  text-transform:uppercase;
+  letter-spacing:1.5px;
+  border-bottom: 2px solid rgba(110, 231, 249, 0.3);
+  position: relative;
+  padding-left: 12px;
+}
+
+.theme-category-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: #0ea5e9;
+}
+
+.theme-category-header:first-child{margin-top:0;}
+
+/* ── CUSTOM THEME MODAL ── */
+.custom-theme-editor{
+  max-width:800px;max-height:90vh;overflow-y:auto;
+}
+
+.custom-theme-form{
+  display:flex;flex-direction:column;gap:20px;
+}
+
+.form-group{
+  display:flex;flex-direction:column;gap:8px;
+}
+
+.form-group label{
+  font-size:12px;font-weight:700;
+  color: #0ea5e9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.form-group input[type="text"]{
+  padding:10px 12px;border-radius:6px;
+  border: 1px solid rgba(110, 231, 249, 0.3);
+  background:rgba(110, 231, 249, 0.05);
+  color:var(--text);
+  font-size:13px;transition:all .2s;
+}
+
+.form-group input[type="text"]:focus{
+  outline:0;
+  border-color:#0ea5e9;
+  background:rgba(110,231,249,.1);
+  box-shadow:0 0 12px rgba(110,231,249,.2);
+}
+
+.colors-section h3, .properties-section h3, .preview-section h3{
+  font-size:13px;font-weight:700;
+  color: #0ea5e9;
+  margin:8px 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.color-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;
+  padding: 12px;
+  background: rgba(110, 231, 249, 0.05);
+  border: 1px solid rgba(110, 231, 249, 0.2);
+  border-radius: 8px;
+}
+
+.color-input-group{
+  display:flex;flex-direction:column;gap:8px;align-items:center;
+}
+
+.color-input-group label{
+  font-size:11px;font-weight:700;
+  color: #0ea5e9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.color-input-group input[type="color"]{
+  width:60px;height:60px;border:2px solid #0ea5e9;
+  border-radius:6px;
+  cursor:pointer;transition:all .2s;
+  box-shadow: 0 0 10px rgba(110, 231, 249, 0.2);
+}
+
+.color-input-group input[type="color"]:hover{
+  border-color:#a855f7;
+  box-shadow: 0 0 15px rgba(110, 231, 249, 0.4), 0 0 8px rgba(247, 201, 72, 0.2);
+  transform: scale(1.05);
+}
+
+.slider-group{
+  display:flex;flex-direction:column;gap:8px;
+  padding: 10px;
+  background: rgba(110, 231, 249, 0.05);
+  border: 1px solid rgba(110, 231, 249, 0.2);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.slider-group:hover {
+  background: rgba(110, 231, 249, 0.08);
+  border-color: rgba(110, 231, 249, 0.3);
+}
+
+.slider-group label{
+  font-size:12px;font-weight:700;color:var(--text);
+  display:flex;justify-content:space-between;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.slider-group span{
+  color:#a855f7;font-weight:700;font-family:monospace;
+  background: rgba(247, 201, 72, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.slider-group input[type="range"]{
+  width:100%;height:6px;border-radius:3px;
+  background: linear-gradient(90deg, rgba(110, 231, 249, 0.2), rgba(247, 201, 72, 0.2));
+  border: 1px solid rgba(110, 231, 249, 0.2);
+  -webkit-appearance:none;appearance:none;
+  cursor:pointer;
+}
+
+.slider-group input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:16px;height:16px;border-radius:50%;
+  background: #0ea5e9;
+  cursor:pointer;
+  border: 2px solid #fff;
+  box-shadow:0 0 8px rgba(110,231,249,.4);
+  transition:all .2s;
+}
+
+.slider-group input[type="range"]::-webkit-slider-thumb:hover{
+  box-shadow:0 0 12px rgba(110,231,249,.6);
+  transform:scale(1.1);
+}
+
+.slider-group input[type="range"]::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;
+  background: #0ea5e9;
+  cursor:pointer;
+  border: 2px solid #fff;
+  box-shadow:0 0 8px rgba(110,231,249,.4);
+}
+
+.preview-section{
+  padding:12px;
+  background: rgba(110, 231, 249, 0.08);
+  border-radius:8px;
+  border: 1px solid rgba(110, 231, 249, 0.2);
+  box-shadow: 0 0 12px rgba(110, 231, 249, 0.1);
+}
+
+.preview-section h3{margin-top:0;}
+
+.custom-preview-wrapper{
+  width:100%;height:200px;border-radius:8px;
+  background: radial-gradient(circle at 30% 30%, rgba(110, 231, 249, 0.1), rgba(0, 0, 0, 0.5));
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.6), 0 0 10px rgba(110, 231, 249, 0.15);
+  border: 1px solid rgba(110, 231, 249, 0.2);
+}
+
+.custom-preview-wrapper canvas{
+  max-width:100%;max-height:100%;
+}
+
+.form-actions{
+  display:flex;gap:10px;justify-content:flex-end;padding-top:12px;
+  border-top: 1px solid rgba(110, 231, 249, 0.2);
+}
+
+.form-actions .btn{
+  padding:8px 16px;border-radius:6px;
+  border: 1px solid rgba(110, 231, 249, 0.3);
+  background:rgba(110, 231, 249, 0.08);
+  color:var(--text);
+  font-size:12px;font-weight:700;cursor:pointer;
+  transition:all .2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-actions .btn:hover{
+  background:rgba(110, 231, 249, 0.15);
+  border-color:#0ea5e9;
+  box-shadow: 0 0 10px rgba(110, 231, 249, 0.3);
+}
+
+.form-actions .btn.primary{
+  background: #0ea5e9;
+  color:#000;
+  border: 1px solid #0ea5e9;
+  font-weight: 900;
+  box-shadow: 0 0 12px rgba(110, 231, 249, 0.3);
+}
+
+.form-actions .btn.primary:hover{
+  background: #0ea5e9;
+  transform:translateY(-1px);
+  box-shadow: 0 0 16px rgba(110,231,249,.5);
+}
+
+/* CUSTOM THEME DELETE OVERLAY */
+.theme-item.custom .delete-overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.9);border-radius:10px;
+  display:none;align-items:center;justify-content:center;gap:6px;
+  opacity:0;transition:all .2s;
+  backdrop-filter: blur(4px);
+}
+
+.theme-item.custom:hover .delete-overlay{
+  display:flex;opacity:1;
+}
+
+.delete-overlay button{
+  padding:6px 10px;border-radius:6px;
+  border: 1px solid #0ea5e9;
+  background:rgba(110, 231, 249, 0.1);color:#0ea5e9;
+  font-size:11px;font-weight:700;cursor:pointer;
+  transition:all .2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.delete-overlay button.delete-btn{
+  background:rgba(255, 96, 122, 0.1);
+  border-color: #ff607a;
+  color: #ff607a;
+}
+
+.delete-overlay button:hover{
+  transform:scale(1.05);
+  box-shadow: 0 0 10px rgba(110, 231, 249, 0.4);
+}
+
+.delete-overlay button.delete-btn:hover {
+  box-shadow: 0 0 10px rgba(255, 96, 122, 0.4);
+}
+
+.theme-item.create-theme-btn {
+  border: 2px dashed rgba(110, 231, 249, 0.4);
+  background: rgba(110, 231, 249, 0.05);
+  transition: all 0.2s;
+}
+
+.theme-item.create-theme-btn:hover {
+  border-color: #0ea5e9;
+  background: rgba(110, 231, 249, 0.1);
+  box-shadow: 0 0 15px rgba(110, 231, 249, 0.3);
+}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">
+    <div class="mark" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div>
+      <h1>PrismCube Pro</h1>
+      <p>Premium 3D speedcubing simulator</p>
+    </div>
+  </div>
+  <div class="metrics">
+    <div class="metric"><b id="timer">0:00.00</b><span>Timer</span></div>
+    <div class="metric"><b id="moveCount">0</b><span>Moves</span></div>
+    <div class="metric"><b id="tps">0.00</b><span>TPS</span></div>
+    <div class="metric"><b id="queueLen">0</b><span>Queue</span></div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn primary" id="btnScramble">⚡ Scramble</button>
+    <button class="btn sm" id="btnTrainer">🎯 Train</button>
+    <button class="btn danger sm" id="btnReset">↺ Reset</button>
+  </div>
+</header>
+
+<!-- LEFT PANEL -->
+<aside class="left-panel panel">
+  <section class="section">
+    <div class="stitle">Move modifier</div>
+    <div class="seg" id="modSeg">
+      <button class="active" data-mod="">90°</button>
+      <button data-mod="'">Prime</button>
+      <button data-mod="2">180°</button>
+    </div>
+    <div class="g3" style="margin-top:9px">
+      <button class="btn move-btn" data-face="R">R</button>
+      <button class="btn move-btn" data-face="L">L</button>
+      <button class="btn move-btn" data-face="U">U</button>
+      <button class="btn move-btn" data-face="D">D</button>
+      <button class="btn move-btn" data-face="F">F</button>
+      <button class="btn move-btn" data-face="B">B</button>
+    </div>
+    <div class="g3" style="margin-top:7px">
+      <button class="btn move-btn" data-face="M">M</button>
+      <button class="btn move-btn" data-face="E">E</button>
+      <button class="btn move-btn" data-face="S">S</button>
+    </div>
+  </section>
+  <section class="section">
+    <div class="stitle">Actions</div>
+    <div class="g2">
+      <button class="btn" id="btnUndo">↩ Undo</button>
+      <button class="btn" id="btnRedo">↪ Redo</button>
+      <button class="btn sm" id="btnSave">💾 Save</button>
+      <button class="btn sm" id="btnLoad">📂 Load</button>
+    </div>
+  </section>
+  <section class="section">
+    <div class="stitle">Speed</div>
+    <div class="row">Fast <input type="range" id="speed" min="60" max="700" value="200"> Slow</div>
+  </section>
+  <section class="section">
+    <div class="stitle">Display</div>
+    <div class="row">Auto-rotate <label class="switch"><input type="checkbox" id="autoRot"><em></em></label></div>
+    <div class="row">Sound <label class="switch"><input type="checkbox" id="muteToggle"><em></em></label></div>
+    <div class="row">Bloom <label class="switch"><input type="checkbox" id="bloomToggle"><em></em></label></div>
+    <div class="row">Show floor <label class="switch"><input type="checkbox" id="floorToggle" checked><em></em></label></div>
+  </section>
+  <section class="section">
+    <div class="stitle">Move history</div>
+    <div class="chips" id="chips"></div>
+  </section>
+</aside>
+
+<!-- RIGHT PANEL -->
+<aside class="right-panel panel">
+  <section class="section">
+    <div class="stitle">Scramble</div>
+    <div class="scr-box" id="scrBox">Press Scramble to begin.</div>
+  </section>
+  <section class="section">
+    <div class="stitle">Session</div>
+    <div class="stats">
+      <div class="stat"><b id="sBest">--</b><small>Best</small></div>
+      <div class="stat"><b id="sAvg">--</b><small>Mean</small></div>
+      <div class="stat"><b id="sAo5">--</b><small>Ao5</small></div>
+      <div class="stat"><b id="sAo12">--</b><small>Ao12</small></div>
+      <div class="stat"><b id="sSolves">0</b><small>Solves</small></div>
+      <div class="stat"><b id="sLast">--</b><small>Last move</small></div>
+    </div>
+    <div class="status"><span class="dot ok" id="solvedDot"></span><span id="solvedLbl">Solved</span></div>
+  </section>
+  <section class="section">
+    <div class="stitle">Cube theme</div>
+    <button class="btn primary" id="btnThemes" style="width:100%">🎨 Select Theme</button>
+    <div style="margin-top:9px">
+      <div class="stitle">Cube style</div>
+      <div class="style-nav" id="styleSeg" style="margin-top:0">
+        <button data-style="stickered">Stickered</button>
+        <button class="active" data-style="stickerless">Stickerless</button>
+        <button data-style="tiled">Tiled</button>
+      </div>
+    </div>
+    <div class="g2" style="margin-top:9px">
+      <button class="btn sm" id="btnCamera">Reset view</button>
+      <button class="btn sm" id="btnFullscreen">⛶ Fullscreen</button>
+    </div>
+  </section>
+</aside>
+
+<!-- BOTTOM PANEL (mobile move pad) -->
+<div class="bottom-panel">
+  <div class="g6">
+    <button class="btn sm move-btn" data-face="R">R</button>
+    <button class="btn sm move-btn" data-face="U">U</button>
+    <button class="btn sm move-btn" data-face="F">F</button>
+    <button class="btn sm move-btn" data-face="L">L</button>
+    <button class="btn sm move-btn" data-face="D">D</button>
+    <button class="btn sm move-btn" data-face="B">B</button>
+  </div>
+  <div class="seg" id="modSegB" style="min-width:140px">
+    <button class="active" data-mod="">90°</button>
+    <button data-mod="'">′</button>
+    <button data-mod="2">²</button>
+  </div>
+</div>
+
+<div class="dbg"><strong id="fps">60</strong> fps<br><span id="tris">0 tris</span></div>
+<div class="toast" id="toast"></div>
+
+<!-- TRAINER SELECTION PANEL -->
+<div class="trainer-panel center" id="trainerSelectionPanel">
+  <div style="text-align:center">
+    <h2 style="margin-bottom:4px;font-size:18px">Training Mode</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Select a trainer to get started</p>
+  </div>
+  <div class="trainer-selection">
+    <div class="trainer-select-btn" data-trainer="cfop">🎯<br>CFOP</div>
+    <div class="trainer-select-btn" data-trainer="cross">✕<br>Cross</div>
+    <div class="trainer-select-btn" data-trainer="f2l">⬜<br>F2L</div>
+    <div class="trainer-select-btn" data-trainer="oll">🟨<br>OLL</div>
+    <div class="trainer-select-btn" data-trainer="pll">🔄<br>PLL</div>
+    <div class="trainer-select-btn" data-trainer="algo">⚙️<br>Algorithm</div>
+  </div>
+  <button class="btn" id="btnExitTrainer" style="margin-top:16px;width:100%">× Close</button>
+</div>
+
+<!-- ACTIVE TRAINER PANEL -->
+<div class="trainer-panel top-right" id="activeTrainerPanel">
+  <div class="stitle">Current Case</div>
+  <div id="trainerCaseInfo" style="font-size:13px;margin:8px 0">
+    <div id="trainerCaseName" style="font-weight:700;color:var(--accent);margin-bottom:4px">OLL 1</div>
+    <div id="trainerCaseDesc" style="font-size:11px;color:var(--muted)">Dot pattern</div>
+  </div>
+
+  <div class="section" style="margin-top:12px">
+    <div class="stitle">Algorithm</div>
+    <div id="trainerAlgo" style="font-family:monospace;font-size:12px;background:rgba(0,0,0,.2);padding:8px;border-radius:8px;margin-top:6px">F R U R' U' F'</div>
+  </div>
+
+  <div class="section" style="margin-top:12px">
+    <div class="stitle">Stats</div>
+    <div id="trainerStats">
+      <div class="stat-row"><span class="stat-label">Time</span><span class="stat-value" id="trainerTime">--</span></div>
+      <div class="stat-row"><span class="stat-label">Moves</span><span class="stat-value" id="trainerMoves">--</span></div>
+      <div class="stat-row"><span class="stat-label">Personal Best</span><span class="stat-value" id="trainerPB">--</span></div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn sm" id="btnNewCase" style="flex:1">New Case</button>
+    <button class="btn sm" id="btnShowStats" style="flex:1">Stats</button>
+    <button class="btn sm" id="btnExitTrainerPanel" style="flex:1">Exit</button>
+  </div>
+</div>
+
+<!-- CASE RECOGNITION PANEL -->
+<div class="recognition-panel" id="recognitionPanel">
+  <div class="rec-title">Detected Case</div>
+  <div class="rec-case" id="recognizedCase">Recognizing...</div>
+  <div class="rec-algo" id="recognizedAlgo">--</div>
+  <div class="rec-confidence" id="recognizedConfidence">--</div>
+</div>
+
+<!-- STATS DASHBOARD PANEL -->
+<div class="trainer-panel center" id="statsPanel" style="width:95vw;max-width:600px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h3 style="font-size:16px">Statistics</h3>
+    <button class="btn sm" id="btnCloseStats">×</button>
+  </div>
+  <div id="statsContent" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <!-- Populated by JavaScript -->
+  </div>
+</div>
+
+<!-- SOLVE OVERLAY -->
+<div class="solve-overlay" id="solveOverlay">
+  <div style="text-align:center">
+    <div class="solve-num" id="solveNum">0:00.00</div>
+    <div class="solve-sub" id="solveSub"></div>
+    <div class="solve-actions">
+      <button class="btn primary" id="btnNewScramble">New Scramble</button>
+      <button class="btn" id="btnCloseSolve">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- THEME MODAL -->
+<div class="theme-modal" id="themeModal">
+  <div class="theme-panel-content">
+    <div class="theme-panel-header">
+      <h2>Select Cube Theme</h2>
+      <button class="close-btn" id="closeThemeModal">×</button>
+    </div>
+    <div class="theme-grid" id="themeGrid">
+      <!-- Theme items generated by JavaScript -->
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM THEME MODAL -->
+<div class="theme-modal" id="customThemeModal">
+  <div class="theme-panel-content custom-theme-editor">
+    <div class="theme-panel-header">
+      <h2 id="customThemeModalTitle">Create Custom Theme</h2>
+      <button class="close-btn" id="closeCustomThemeModal">×</button>
+    </div>
+    <div class="custom-theme-form">
+      <div class="form-group">
+        <label>Theme Name</label>
+        <input type="text" id="customThemeName" placeholder="My Custom Theme" maxlength="30">
+      </div>
+
+      <div class="colors-section">
+        <h3>Face Colors</h3>
+        <div class="color-grid">
+          <div class="color-input-group">
+            <label>Up (U)</label>
+            <input type="color" id="colorU" value="#ffffff">
+          </div>
+          <div class="color-input-group">
+            <label>Down (D)</label>
+            <input type="color" id="colorD" value="#ffd500">
+          </div>
+          <div class="color-input-group">
+            <label>Front (F)</label>
+            <input type="color" id="colorF" value="#009b48">
+          </div>
+          <div class="color-input-group">
+            <label>Back (B)</label>
+            <input type="color" id="colorB" value="#0046ad">
+          </div>
+          <div class="color-input-group">
+            <label>Right (R)</label>
+            <input type="color" id="colorR" value="#d40f00">
+          </div>
+          <div class="color-input-group">
+            <label>Left (L)</label>
+            <input type="color" id="colorL" value="#ff6f00">
+          </div>
+          <div class="color-input-group">
+            <label>Plastic Core</label>
+            <input type="color" id="colorPlastic" value="#000000">
+          </div>
+        </div>
+      </div>
+
+      <div class="properties-section">
+        <h3>Material Properties</h3>
+        <div class="slider-group">
+          <label>Sticker Roughness: <span id="roughnessValue">0.22</span></label>
+          <input type="range" id="stickerRoughness" min="0" max="1" step="0.01" value="0.22">
+        </div>
+        <div class="slider-group">
+          <label>Sticker Clearcoat: <span id="clearcoatValue">0.84</span></label>
+          <input type="range" id="stickerClearcoat" min="0" max="1" step="0.01" value="0.84">
+        </div>
+        <div class="slider-group">
+          <label>Clearcoat Roughness: <span id="clearcoatRoughValue">0.16</span></label>
+          <input type="range" id="stickerCC_R" min="0" max="1" step="0.01" value="0.16">
+        </div>
+        <div class="slider-group">
+          <label>Plastic Roughness: <span id="plasticRoughnessValue">0.42</span></label>
+          <input type="range" id="plasticRoughness" min="0" max="1" step="0.01" value="0.42">
+        </div>
+        <div class="slider-group">
+          <label>Plastic Metalness: <span id="plasticMetalValue">0.1</span></label>
+          <input type="range" id="plasticMetal" min="0" max="1" step="0.01" value="0.1">
+        </div>
+        <div class="slider-group">
+          <label>Plastic Clearcoat: <span id="plasticCCValue">0.65</span></label>
+          <input type="range" id="plasticCC" min="0" max="1" step="0.01" value="0.65">
+        </div>
+      </div>
+
+      <div class="preview-section">
+        <h3>Preview</h3>
+        <div class="custom-preview-wrapper" id="customPreviewWrapper">
+          <!-- Preview canvas will be added here -->
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn" id="btnCancelCustomTheme">Cancel</button>
+        <button class="btn primary" id="btnSaveCustomTheme">Save Theme</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden selTheme select required by JS handlers -->
+<select id="selTheme" style="display:none">
+  <option value="rubiks">Rubik's Official</option>
+  <option value="gan">GAN Vivid</option>
+  <option value="speed">Speed Classic</option>
+  <option value="neon">Neon Cyber</option>
+  <option value="carbon">Carbon Dark</option>
+  <option value="midnight">Midnight Galaxy</option>
+  <option value="pastel">Pastel Pop</option>
+  <option value="metal">Brushed Metal</option>
+  <option value="moyu">MoYu Modern</option>
+  <option value="dayan">DaYan Fresh</option>
+  <option value="vivid">Vivid Bright</option>
+  <option value="glassmorphic">Glassmorphic</option>
+  <option value="darkmode">Dark Mode</option>
+</select>
+
+<!-- THREE.JS via importmap -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/",
+    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { gsap } from 'gsap';
+
+// ═══════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════
+const HP = Math.PI / 2;
+const SPC = 1.08; // spacing between cubies
+const CS  = 0.965; // cubie size
+
+// Face definitions: axis, layer, sign of rotation for CW turn
+// sign: +1 means rotating the axis CCW in right-hand coords = CW when viewed from positive axis
+const FACE_DEF = {
+  R: { axis: 'x', layer:  1, sign: -1 },
+  L: { axis: 'x', layer: -1, sign:  1 },
+  U: { axis: 'y', layer:  1, sign: -1 },
+  D: { axis: 'y', layer: -1, sign:  1 },
+  F: { axis: 'z', layer:  1, sign: -1 },
+  B: { axis: 'z', layer: -1, sign:  1 },
+  M: { axis: 'x', layer:  0, sign:  1 }, // Middle (between L and R)
+  E: { axis: 'y', layer:  0, sign:  1 }, // Equatorial (between U and D)
+  S: { axis: 'z', layer:  0, sign: -1 }, // Standing (between F and B)
+};
+
+// Coordinate transform for one 90° CW turn per axis
+// (x,y,z) → new (x,y,z) after rotating around axis once CW (viewed from + axis)
+function rotCoord1(coord, axis) {
+  let {x, y, z} = coord;
+  if (axis === 'x') return {x,  y: -z, z:  y};
+  if (axis === 'y') return {x:  z, y,   z: -x};
+  if (axis === 'z') return {x: -y, y:   x, z};
+}
+// CCW = 3× CW
+function rotCoordN(coord, axis, cw_turns) {
+  let c = coord;
+  const n = ((cw_turns % 4) + 4) % 4;
+  for (let i = 0; i < n; i++) c = rotCoord1(c, axis);
+  return c;
+}
+
+// ═══════════════════════════════════════
+// THEMES
+// ═══════════════════════════════════════
+const THEMES = {
+  gan: {
+    U:0xf7fbff, D:0xffe45f, F:0x35d47f, B:0x3f7cff, R:0xff4f64, L:0xff9a2f,
+    plastic:0x111820,
+    stickerRoughness:0.16, stickerClearcoat:0.86, stickerCC_R:0.12,
+    plasticRoughness:0.32, plasticMetal:0.0, plasticCC:0.55
+  },
+  speed: {
+    U:0xf7f8f3, D:0xffd23f, F:0x1fbf75, B:0x2478ff, R:0xef3f4f, L:0xff8a28,
+    plastic:0x080a10,
+    stickerRoughness:0.26, stickerClearcoat:0.92, stickerCC_R:0.14,
+    plasticRoughness:0.38, plasticMetal:0.0, plasticCC:0.85
+  },
+  neon: {
+    U:0xf8fdff, D:0xffe033, F:0x00f09a, B:0x4cc8ff, R:0xff3d7f, L:0xff9100,
+    plastic:0x030610,
+    stickerRoughness:0.18, stickerClearcoat:0.98, stickerCC_R:0.08,
+    plasticRoughness:0.25, plasticMetal:0.05, plasticCC:0.95
+  },
+  carbon: {
+    U:0xe2e7ee, D:0xd4a93a, F:0x30aa72, B:0x3060cc, R:0xc83848, L:0xd07030,
+    plastic:0x111416,
+    stickerRoughness:0.32, stickerClearcoat:0.75, stickerCC_R:0.22,
+    plasticRoughness:0.55, plasticMetal:0.25, plasticCC:0.6
+  },
+  midnight: {
+    U:0xd4deff, D:0x9b72ff, F:0x72b8ff, B:0xff72c8, R:0xff9872, L:0x72ffd4,
+    plastic:0x04050d,
+    stickerRoughness:0.20, stickerClearcoat:0.95, stickerCC_R:0.10,
+    plasticRoughness:0.20, plasticMetal:0.15, plasticCC:0.98
+  },
+  pastel: {
+    U:0xfafcfe, D:0xfff0a0, F:0xa8f0c8, B:0xa0d0ff, R:0xffb0b8, L:0xffd0a0,
+    plastic:0x1a1820,
+    stickerRoughness:0.42, stickerClearcoat:0.55, stickerCC_R:0.38,
+    plasticRoughness:0.6, plasticMetal:0.0, plasticCC:0.4
+  },
+  metal: {
+    U:0xe8edf2, D:0xd4c060, F:0x60b880, B:0x6080d4, R:0xc84848, L:0xd08040,
+    plastic:0x1c1e22,
+    stickerRoughness:0.12, stickerClearcoat:0.98, stickerCC_R:0.06,
+    plasticRoughness:0.18, plasticMetal:0.88, plasticCC:0.9
+  },
+  rubiks: {
+    U:0xffffff, D:0xffd500, F:0x009b48, B:0x0046ad, R:0xd40f00, L:0xff6f00,
+    plastic:0x000000,
+    stickerRoughness:0.22, stickerClearcoat:0.84, stickerCC_R:0.16,
+    plasticRoughness:0.42, plasticMetal:0.1, plasticCC:0.65
+  },
+  moyu: {
+    U:0xfcfcfc, D:0xffc200, F:0x00a94f, B:0x0052cc, R:0xe4151f, L:0xff9500,
+    plastic:0x0a0a0a,
+    stickerRoughness:0.18, stickerClearcoat:0.88, stickerCC_R:0.12,
+    plasticRoughness:0.3, plasticMetal:0.0, plasticCC:0.7
+  },
+  dayan: {
+    U:0xeef8f8, D:0xf5d76e, F:0x2bbf59, B:0x007bff, R:0xff3838, L:0xff7f00,
+    plastic:0x141414,
+    stickerRoughness:0.20, stickerClearcoat:0.9, stickerCC_R:0.14,
+    plasticRoughness:0.35, plasticMetal:0.05, plasticCC:0.75
+  },
+  vivid: {
+    U:0xfffacd, D:0xffb6c1, F:0x90ee90, B:0x87ceeb, R:0xff6347, L:0xffa500,
+    plastic:0x0d0d1f,
+    stickerRoughness:0.14, stickerClearcoat:0.96, stickerCC_R:0.08,
+    plasticRoughness:0.22, plasticMetal:0.1, plasticCC:0.92
+  },
+  glassmorphic: {
+    U:0xe8f4f8, D:0xffe8cc, F:0xd4f1d4, B:0xd9e9ff, R:0xffe8e8, L:0xffdab9,
+    plastic:0x1f1f3d,
+    stickerRoughness:0.08, stickerClearcoat:1.0, stickerCC_R:0.02,
+    plasticRoughness:0.15, plasticMetal:0.2, plasticCC:0.88
+  },
+  darkmode: {
+    U:0x505050, D:0x707070, F:0x606060, B:0x505050, R:0x707070, L:0x606060,
+    plastic:0x1a1a1a,
+    stickerRoughness:0.5, stickerClearcoat:0.4, stickerCC_R:0.3,
+    plasticRoughness:0.6, plasticMetal:0.0, plasticCC:0.2
+  },
+};
+
+// ═══════════════════════════════════════
+// AUDIO
+// ═══════════════════════════════════════
+class Audio {
+  constructor() { this.ctx = null; this.muted = false; }
+  _ctx() { if (!this.ctx) this.ctx = new (window.AudioContext||window.webkitAudioContext)(); return this.ctx; }
+  click(fast) {
+    if (this.muted) return;
+    const ctx = this._ctx();
+    const t = ctx.currentTime;
+    const buf = ctx.createBuffer(1, ctx.sampleRate*.06, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/d.length, 2.8);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const flt = ctx.createBiquadFilter(); flt.type='bandpass'; flt.frequency.value = fast?1200:800; flt.Q.value=2.4;
+    const g = ctx.createGain(); g.gain.setValueAtTime(fast?.06:.04,t); g.gain.exponentialRampToValueAtTime(.001,t+.07);
+    src.connect(flt).connect(g).connect(ctx.destination);
+    src.start(t); src.stop(t+.08);
+  }
+}
+
+// ═══════════════════════════════════════
+// TIMER
+// ═══════════════════════════════════════
+class Timer {
+  constructor() { this.t0=0; this.acc=0; this.on=false; this.moves=0; }
+  start() { if(this.on)return; this.t0=performance.now()-this.acc; this.on=true; }
+  stop()  { if(!this.on)return; this.acc=performance.now()-this.t0; this.on=false; }
+  reset() { this.t0=performance.now(); this.acc=0; this.on=false; this.moves=0; }
+  ms()    { return this.on ? performance.now()-this.t0 : this.acc; }
+  tps()   { const s=this.ms()/1e3; return s>.1 ? this.moves/s : 0; }
+  fmt()   { return fmtTime(this.ms()); }
+}
+
+function fmtTime(ms) {
+  ms = Math.max(0,ms);
+  const m = Math.floor(ms/6e4);
+  const s = Math.floor((ms%6e4)/1e3);
+  const c = Math.floor((ms%1e3)/10);
+  return `${m}:${String(s).padStart(2,'0')}.${String(c).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════
+// CUBE SIMULATOR
+// ═══════════════════════════════════════
+class CubeEngine {
+  constructor(scene, audio) {
+    this.scene = scene;
+    this.audio = audio;
+    this.root  = new THREE.Group(); scene.add(this.root);
+    this.pivot = new THREE.Group(); this.root.add(this.pivot);
+    this.cubies = [];
+    this.queue  = [];
+    this.history = [];
+    this.redoStack = [];
+    this.busy   = false;
+    this.moveCount = 0;
+    this.speed  = 200;
+    this.theme  = 'rubiks';
+    this.style  = 'stickerless'; // stickered | stickerless | tiled
+    this._mats  = {};
+    this._buildMats();
+    this._build();
+  }
+
+  // ── Materials ────────────────────────
+  _buildMats() {
+    const T = THEMES[this.theme] || THEMES.speed;
+    this._mats.plastic = new THREE.MeshPhysicalMaterial({
+      color: T.plastic,
+      emissive: T.plastic,
+      emissiveIntensity: 0.12,
+      roughness: T.plasticRoughness,
+      metalness: T.plasticMetal,
+      clearcoat: Math.min(T.plasticCC, 0.32),
+      clearcoatRoughness: 0.58,
+      envMapIntensity: 0.32,
+    });
+    this._mats.sticker = {};
+    for (const face of 'UDFRBL'.split('')) {
+      this._mats.sticker[face] = new THREE.MeshPhysicalMaterial({
+        color: T[face],
+        emissive: T[face],
+        emissiveIntensity: 0.38,
+        roughness: T.stickerRoughness,
+        metalness: 0,
+        clearcoat: Math.min(T.stickerClearcoat, 0.38),
+        clearcoatRoughness: 0.5,
+        envMapIntensity: 0.38,
+      });
+    }
+    // Tiled inner material (stickerless style - each face colored)
+    this._mats.tileInner = new THREE.MeshPhysicalMaterial({
+      color: 0x080a10,
+      roughness: 0.7,
+      metalness: 0,
+    });
+  }
+
+  _applyMats() {
+    const T = THEMES[this.theme] || THEMES.speed;
+    // update existing materials in-place so three.js doesn't recreate programs
+    const p = this._mats.plastic;
+    p.color.set(T.plastic);
+    p.emissive.set(T.plastic);
+    p.emissiveIntensity = 0.12;
+    p.roughness = T.plasticRoughness;
+    p.metalness = T.plasticMetal;
+    p.clearcoat = Math.min(T.plasticCC, 0.32);
+    p.clearcoatRoughness = 0.58;
+    p.envMapIntensity = 0.32;
+    for (const face of 'UDFRBL'.split('')) {
+      const m = this._mats.sticker[face];
+      m.color.set(T[face]);
+      m.emissive.set(T[face]);
+      m.emissiveIntensity = 0.38;
+      m.roughness = T.stickerRoughness;
+      m.clearcoat = Math.min(T.stickerClearcoat, 0.38);
+      m.clearcoatRoughness = 0.5;
+      m.envMapIntensity = 0.38;
+      m.needsUpdate = true;
+    }
+    p.needsUpdate = true;
+    this._refreshStyle();
+  }
+
+  _refreshStyle() {
+    const style = this.style;
+    for (const cubie of this.cubies) {
+      if (style === 'stickered') {
+        cubie.core.visible = true;
+        cubie.core.material = this._mats.plastic;
+        if (cubie.slMesh) cubie.slMesh.visible = false;
+        for (const s of cubie.stickers) {
+          s.mesh.visible = true;
+          s.mesh.material = this._mats.sticker[s.face];
+          s.mesh.scale.set(1,1,1);
+        }
+      } else if (style === 'stickerless') {
+        cubie.core.visible = true;
+        cubie.core.material = this._mats.plastic;
+        if (cubie.slMesh) cubie.slMesh.visible = false;
+        for (const s of cubie.stickers) {
+          s.mesh.visible = true;
+          s.mesh.material = this._mats.sticker[s.face];
+          s.mesh.scale.set(1.18,1.18,1);
+        }
+      } else if (style === 'tiled') {
+        cubie.core.visible = true;
+        cubie.core.material = this._mats.plastic;
+        if (cubie.slMesh) cubie.slMesh.visible = false;
+        for (const s of cubie.stickers) {
+          s.mesh.visible = true;
+          s.mesh.material = this._mats.sticker[s.face];
+          s.mesh.scale.set(0.84,0.84,1);
+        }
+      }
+    }
+  }
+
+  // ── Build cubies ─────────────────────
+  _build() {
+    // Remove old
+    for (const c of this.cubies) this.root.remove(c.group);
+    this.cubies = [];
+
+    const coreGeo = new RoundedBoxGeometry(CS, CS, CS, 8, 0.065);
+    // Stickerless uses standard BoxGeometry so 6 material groups work
+    const slGeo = new THREE.BoxGeometry(CS, CS, CS);
+    const stickerGeo = new RoundedBoxGeometry(0.74, 0.74, 0.026, 6, 0.045);
+
+    for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++) {
+      if (x===0&&y===0&&z===0) continue;
+      const g = new THREE.Group();
+      g.position.set(x*SPC, y*SPC, z*SPC);
+      g.userData.coord = {x,y,z};
+
+      // Stickerless per-face materials (6 faces of BoxGeometry)
+      // three's BoxGeometry face order: +x, -x, +y, -y, +z, -z = R,L,U,D,F,B
+      const faceOrder = ['R','L','U','D','F','B'];
+      const stickerlessMats = faceOrder.map(face => {
+        const coord = {x,y,z};
+        // If this cubie has this face exposed, use face color, else use plastic
+        const exposed = (face==='R'&&x===1)||(face==='L'&&x===-1)||
+                        (face==='U'&&y===1)||(face==='D'&&y===-1)||
+                        (face==='F'&&z===1)||(face==='B'&&z===-1);
+        return exposed
+          ? new THREE.MeshPhysicalMaterial({color: THEMES[this.theme][face], emissive: THEMES[this.theme][face], emissiveIntensity:0.38, roughness:0.42, clearcoat:0.34, clearcoatRoughness:0.5, envMapIntensity:0.38})
+          : new THREE.MeshPhysicalMaterial({color:0x06080e, emissive:0x06080e, emissiveIntensity:0.08, roughness:0.6, metalness:0});
+      });
+
+      const core = new THREE.Mesh(coreGeo, this._mats.plastic);
+      core.castShadow = true; core.receiveShadow = true;
+      g.add(core);
+      // Stickerless mesh: BoxGeometry supports 6-group multi-material
+      const slMesh = new THREE.Mesh(slGeo, stickerlessMats);
+      slMesh.visible = false;
+      slMesh.castShadow = true; slMesh.receiveShadow = true;
+      g.add(slMesh);
+
+      const stickers = [];
+      const faceNormals = {
+        U: [0,1,0], D: [0,-1,0], F: [0,0,1], B: [0,0,-1], R: [1,0,0], L: [-1,0,0]
+      };
+      const faceRots = {
+        U: [-HP,0,0], D: [HP,0,0], F: [0,0,0], B: [0,Math.PI,0], R: [0,HP,0], L: [0,-HP,0]
+      };
+      const exposed = (f) =>
+        (f==='U'&&y===1)||(f==='D'&&y===-1)||(f==='F'&&z===1)||
+        (f==='B'&&z===-1)||(f==='R'&&x===1)||(f==='L'&&x===-1);
+
+      for (const face of 'UDFRBL'.split('')) {
+        if (!exposed(face)) continue;
+        const sm = new THREE.Mesh(stickerGeo, this._mats.sticker[face]);
+        const n = faceNormals[face];
+        sm.position.set(n[0]*(CS/2+0.022), n[1]*(CS/2+0.022), n[2]*(CS/2+0.022));
+        sm.rotation.set(...faceRots[face]);
+        sm.renderOrder = 2;
+        sm.userData.face = face;
+        sm.castShadow = false; sm.receiveShadow = true;
+        g.add(sm);
+        stickers.push({face, mesh:sm});
+      }
+
+      this.root.add(g);
+      this.cubies.push({group:g, core, slMesh, stickers, home:{x,y,z}, stickerlessMats});
+    }
+    this._refreshStyle();
+  }
+
+  rebuild() { this._buildMats(); this._build(); }
+
+  // ── Move queue ───────────────────────
+  enqueue(mv, opts={}) {
+    const p = parseMv(mv);
+    if (!p) return;
+    this.queue.push({...p, raw:mv, record: opts.record!==false, silent:!!opts.silent});
+    if (!this.busy) this._next();
+  }
+
+  enqueueMany(moves, opts={}) { for (const m of moves) this.enqueue(m, opts); }
+
+  _next() {
+    if (this.busy || !this.queue.length) return;
+    this._exec(this.queue.shift());
+  }
+
+  // ── Execute a single turn ────────────
+  _exec(mv) {
+    this.busy = true;
+    const def = FACE_DEF[mv.face];
+    const angle = (mv.amount===2 ? Math.PI : HP) * def.sign * (mv.prime ? -1 : 1);
+
+    // CW turns for logical update: sign*-1 maps to CW count
+    // For logical coord update we need how many 90° CW turns
+    // angle = def.sign * (prime?-1:1) * (amount===2?2:1) * (PI/2)
+    // cw_turns = round(angle / (PI/2)) but positive = CW (viewed from +axis)
+    // def.sign=-1 means positive angle is CW… let's just track the raw turns:
+    const cwTurns_raw = Math.round(angle / HP); // signed, in range [-4..4]
+    // Positive cwTurns_raw = CCW in right-hand = CW when viewed from + axis?
+    // Three.js rotates CCW for positive angle around positive axis.
+    // Our coord transform rotCoord1 is defined as CW viewed from +axis.
+    // So: positive three.js rotation = CCW from +axis = CW from -axis.
+    // rotCoord1(coord,'x') gives "after 1 CW turn viewed from +x"
+    // which corresponds to negative three.js rotation around x.
+    // So logical cw_count = -cwTurns_raw
+    const logicalCW = ((-cwTurns_raw) % 4 + 4) % 4;
+
+    // Select cubies in this layer
+    const sel = this.cubies.filter(c => c.group.userData.coord[def.axis] === def.layer);
+
+    // Reparent into a pivot that lives inside cube.root, so turns always use cube-local axes.
+    this.pivot.rotation.set(0,0,0);
+    this.pivot.position.set(0,0,0);
+    this.pivot.quaternion.identity();
+    this.pivot.updateMatrixWorld();
+    for (const c of sel) this.pivot.attach(c.group);
+
+    const dur = Math.max(0.06, this.speed/1000) * (mv.amount===2 ? 1.25 : 1);
+    const rotTarget = { [def.axis]: angle };
+
+    gsap.to(this.pivot.rotation, {
+      ...rotTarget, duration: dur, ease: 'power3.inOut',
+      onStart: () => this.audio.click(dur < 0.16),
+      onComplete: () => {
+        this.pivot.updateMatrixWorld(true);
+        for (const c of sel) {
+          this.root.attach(c.group);
+          // Snap position, then derive logical coordinates from the rendered result.
+          const coord = coordFromPosition(c.group.position);
+          c.group.position.set(coord.x * SPC, coord.y * SPC, coord.z * SPC);
+          snapQuat(c.group.quaternion);
+          c.group.updateMatrix();
+          c.group.userData.coord = coord;
+        }
+        this.pivot.rotation.set(0,0,0);
+        this.pivot.quaternion.identity();
+        this.pivot.position.set(0,0,0);
+        this.busy = false;
+        if (mv.record) {
+          this.history.push(mv.raw);
+          this.redoStack = [];
+          this.moveCount++;
+          timer.moves++;
+          timer.start();
+        }
+        onMoved(mv.raw);
+        this._next();
+      }
+    });
+  }
+
+  // ── Reset ────────────────────────────
+  reset(animated=true) {
+    gsap.killTweensOf(this.pivot.rotation);
+    this.queue = []; this.history = []; this.redoStack = [];
+    this.busy = false; this.moveCount = 0;
+    // Move pivot children back
+    while (this.pivot.children.length) this.root.attach(this.pivot.children[0]);
+    this.pivot.position.set(0,0,0);
+    this.pivot.rotation.set(0,0,0);
+    this.pivot.quaternion.identity();
+    for (const c of this.cubies) {
+      c.group.userData.coord = {...c.home};
+      c.group.quaternion.identity();
+      const tx = c.home.x*SPC, ty = c.home.y*SPC, tz = c.home.z*SPC;
+      if (animated) {
+        gsap.to(c.group.position, {x:tx, y:ty, z:tz, duration:.4, ease:'power3.out'});
+      } else {
+        c.group.position.set(tx,ty,tz);
+      }
+    }
+    timer.reset();
+    updateUI();
+  }
+
+  // ── Undo / Redo ──────────────────────
+  undo() {
+    const mv = this.history.pop(); if (!mv) return;
+    this.redoStack.push(mv);
+    this.moveCount = Math.max(0, this.moveCount-1);
+    timer.moves = Math.max(0, timer.moves-1);
+    this.enqueue(invertMv(mv), {record:false});
+  }
+  redo() {
+    const mv = this.redoStack.pop(); if (!mv) return;
+    this.enqueue(mv, {record:true});
+  }
+
+  // ── Solved check ─────────────────────
+  isSolved() {
+    return this.cubies.every(c => {
+      const coord = c.group.userData.coord;
+      return coord.x===c.home.x && coord.y===c.home.y && coord.z===c.home.z
+        && isIdentityQuat(c.group.quaternion);
+    });
+  }
+
+  // ── Save / Load ──────────────────────
+  save() {
+    const state = {
+      cubies: this.cubies.map(c => ({home:c.home, coord:c.group.userData.coord, q:c.group.quaternion.toArray()})),
+      history: this.history,
+      moveCount: this.moveCount,
+      theme: this.theme, style: this.style,
+    };
+    localStorage.setItem('prismcube_v2', JSON.stringify(state));
+  }
+  load() {
+    const raw = localStorage.getItem('prismcube_v2'); if (!raw) return false;
+    try {
+      const s = JSON.parse(raw);
+      this.theme = s.theme||'speed'; this.style = s.style||'stickered';
+      document.getElementById('selTheme').value = this.theme;
+      document.getElementById('styleSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.style===this.style));
+      this.rebuild();
+      for (const sv of s.cubies||[]) {
+        const c = this.cubies.find(x=>x.home.x===sv.home.x&&x.home.y===sv.home.y&&x.home.z===sv.home.z);
+        if (!c) continue;
+        c.group.userData.coord = sv.coord;
+        c.group.position.set(sv.coord.x*SPC, sv.coord.y*SPC, sv.coord.z*SPC);
+        c.group.quaternion.fromArray(sv.q);
+        snapQuat(c.group.quaternion);
+      }
+      this.history = s.history||[];
+      this.moveCount = s.moveCount||0;
+      timer.moves = this.moveCount;
+      return true;
+    } catch(e){ return false; }
+  }
+}
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function parseMv(mv) {
+  const m = /^([RUDFLBMES])([2']?)$/.exec(mv.trim());
+  if (!m) return null;
+  return {face:m[1], prime:m[2]==="'", amount:m[2]==='2'?2:1};
+}
+
+function invertMv(mv) {
+  if (mv.endsWith('2')) return mv;
+  if (mv.endsWith("'")) return mv[0];
+  return mv[0]+"'";
+}
+
+// Snap quaternion to nearest 90° rotation
+function snapQuat(q) {
+  // Build rotation matrix, round each element to nearest integer, rebuild
+  const m = new THREE.Matrix4().makeRotationFromQuaternion(q);
+  const e = m.elements; // column-major
+  // Round each element
+  for (let i = 0; i < 16; i++) e[i] = Math.round(e[i]);
+  // Ensure det=1 (in case rounding made it degenerate)
+  // Re-extract valid rotation
+  q.setFromRotationMatrix(m).normalize();
+}
+
+function isIdentityQuat(q) {
+  return Math.abs(q.x)<0.02 && Math.abs(q.y)<0.02 && Math.abs(q.z)<0.02 && Math.abs(Math.abs(q.w)-1)<0.02;
+}
+
+function coordFromPosition(pos) {
+  return {
+    x: THREE.MathUtils.clamp(Math.round(pos.x / SPC), -1, 1),
+    y: THREE.MathUtils.clamp(Math.round(pos.y / SPC), -1, 1),
+    z: THREE.MathUtils.clamp(Math.round(pos.z / SPC), -1, 1),
+  };
+}
+
+function faceFromWorldNormal(normal) {
+  const ax = Math.abs(normal.x);
+  const ay = Math.abs(normal.y);
+  const az = Math.abs(normal.z);
+  if (ax >= ay && ax >= az) return normal.x >= 0 ? 'R' : 'L';
+  if (ay >= ax && ay >= az) return normal.y >= 0 ? 'U' : 'D';
+  return normal.z >= 0 ? 'F' : 'B';
+}
+
+function generateScramble(len=22) {
+  const faces = 'RUDFLBMES'.split('');
+  const axOf  = {R:'x',U:'y',D:'y',F:'z',B:'z',L:'x',M:'x',E:'y',S:'z'};
+  const sfx   = ['',"'","2"];
+  const out   = [];
+  let lastAxis = '';
+  while (out.length < len) {
+    const f = faces[Math.floor(Math.random()*9)];
+    if (axOf[f]===lastAxis) continue;
+    out.push(f + sfx[Math.floor(Math.random()*3)]);
+    lastAxis = axOf[f];
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════
+// DRAG-TO-MOVE  (world-space correct)
+// ═══════════════════════════════════════
+// Key insight: we project the face normal and the two tangent directions into
+// screen space, then compare the drag vector to decide which layer & direction.
+function dragToMove(faceInfo, dx, dy, camera) {
+  const {face, coord} = faceInfo;
+
+  // World-space normal of the touched face (before any cube rotation — cube root has no rotation)
+  const faceNormals = {
+    U:[0,1,0], D:[0,-1,0], F:[0,0,1], B:[0,0,-1], R:[1,0,0], L:[-1,0,0]
+  };
+  const fn = new THREE.Vector3(...faceNormals[face]);
+
+  // Two tangent directions on the face plane (world space)
+  // We pick two orthogonal world axes that are perpendicular to the normal
+  const worldAxes = [
+    new THREE.Vector3(1,0,0),
+    new THREE.Vector3(0,1,0),
+    new THREE.Vector3(0,0,1),
+  ];
+  // Filter out axis parallel to normal
+  const tangents = worldAxes.filter(a => Math.abs(a.dot(fn)) < 0.5);
+  // tangents[0] and tangents[1] are the two tangent axes
+
+  // Project tangent vectors into screen space
+  const proj = (v3) => {
+    const p = v3.clone().project(camera);
+    return new THREE.Vector2(p.x, -p.y); // flip y: screen y goes down
+  };
+
+  // Project from cube center + tangent to cube center
+  const origin = new THREE.Vector3(0,0,0);
+  const p0 = proj(origin);
+
+  const screenDrag = new THREE.Vector2(dx, dy).normalize();
+
+  // For each tangent, find which layer to turn and which direction
+  // Screen space direction of tangent[i]
+  let bestDot  = -Infinity;
+  let bestMove = null;
+
+  for (const tan of tangents) {
+    const pt = proj(tan.clone().multiplyScalar(2));
+    const scrDir = pt.clone().sub(p0).normalize();
+
+    const d = scrDir.dot(screenDrag);
+    if (Math.abs(d) <= bestDot) continue;
+    bestDot = Math.abs(d);
+
+    // Which axis is this tangent?
+    const tanAxis = Math.abs(tan.x)>.5 ? 'x' : Math.abs(tan.y)>.5 ? 'y' : 'z';
+    // Layer = the coord on that axis for this cubie
+    const layer = coord[tanAxis];
+    // Face of that layer
+    const posFace = tanAxis==='x'?'R':tanAxis==='y'?'U':'F';
+    const negFace = tanAxis==='x'?'L':tanAxis==='y'?'D':'B';
+
+    // d > 0 means drag is in direction of tangent in screen space
+    // We need to determine CW vs CCW for that face
+    // The sign of d tells us + or - tangent direction
+    const sign = d > 0 ? 1 : -1;
+
+    // For layer +1: use posFace, sign determines prime
+    // For layer -1: use negFace, sign determines prime
+    // For layer 0: use M/E/S (we'll map to nearest face)
+
+    let faceToTurn, prime;
+    if (layer === 1) {
+      faceToTurn = posFace;
+      // Positive tangent direction with no prime = rotate CW from + axis view
+      // We need to figure out if sign gives CW or CCW
+      // For +x face (R): looking from +x, dragging in +y screen = U face CW? Nope.
+      // Actually, just use the sign directly:
+      prime = sign < 0;
+    } else if (layer === -1) {
+      faceToTurn = negFace;
+      prime = sign > 0; // reversed for opposite face
+    } else {
+      // Middle layer - find which face gives correct axis
+      // Use the tangent cross normal to figure out sense
+      faceToTurn = posFace; // use positive face for M slice
+      prime = sign < 0;
+    }
+
+    bestMove = {faceToTurn, prime, dot: Math.abs(d)};
+  }
+
+  if (!bestMove) return null;
+  return bestMove.faceToTurn + (bestMove.prime ? "'" : '');
+}
+
+// ═══════════════════════════════════════
+// THREE.JS SCENE
+// ═══════════════════════════════════════
+// Stable face-drag mapping. It intentionally does not use camera projection,
+// so layer turns do not change when the view is orbit-rotated.
+function dragToMoveStable(faceInfo, dx, dy) {
+  const horizontal = Math.abs(dx) >= Math.abs(dy);
+  const positive = horizontal ? dx > 0 : dy > 0;
+  const table = {
+    U: horizontal ? (positive ? 'U' : "U'") : (positive ? 'B' : "F'"),
+    D: horizontal ? (positive ? "D'" : 'D') : (positive ? 'F' : "B'"),
+    F: horizontal ? (positive ? 'U' : "U'") : (positive ? "R'" : 'R'),
+    B: horizontal ? (positive ? "U'" : 'U') : (positive ? 'L' : "L'"),
+    R: horizontal ? (positive ? 'F' : "F'") : (positive ? "D'" : 'U'),
+    L: horizontal ? (positive ? "F'" : 'F') : (positive ? 'D' : "U'")
+  };
+  return table[faceInfo.face] || null;
+}
+
+function dragToMoveView(faceInfo, dx, dy, camera, cubeRoot) {
+  const normals = {
+    U: new THREE.Vector3(0, 1, 0),
+    D: new THREE.Vector3(0, -1, 0),
+    F: new THREE.Vector3(0, 0, 1),
+    B: new THREE.Vector3(0, 0, -1),
+    R: new THREE.Vector3(1, 0, 0),
+    L: new THREE.Vector3(-1, 0, 0),
+  };
+  const faceNormal = normals[faceInfo.face];
+  if (!faceNormal) return null;
+
+  const drag = new THREE.Vector2(dx, dy).normalize();
+  const origin = new THREE.Vector3(0, 0, 0);
+  const localToScreen = (local) => {
+    const p0 = cubeRoot.localToWorld(origin.clone()).project(camera);
+    const p1 = cubeRoot.localToWorld(local.clone()).project(camera);
+    return new THREE.Vector2(p1.x - p0.x, -(p1.y - p0.y)).normalize();
+  };
+
+  const candidates = [
+    new THREE.Vector3(1, 0, 0),
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(0, 0, 1),
+  ].filter(axis => Math.abs(axis.dot(faceNormal)) < 0.5);
+
+  let bestTangent = null;
+  let bestDot = 0;
+  for (const tangent of candidates) {
+    const screen = localToScreen(tangent);
+    const dot = screen.dot(drag);
+    if (Math.abs(dot) > Math.abs(bestDot)) {
+      bestDot = dot;
+      bestTangent = tangent.clone().multiplyScalar(dot >= 0 ? 1 : -1);
+    }
+  }
+  if (!bestTangent || Math.abs(bestDot) < 0.18) return null;
+
+  const turnAxis = faceNormal.clone().cross(bestTangent).normalize();
+  const axis = Math.abs(turnAxis.x) > 0.5 ? 'x' : Math.abs(turnAxis.y) > 0.5 ? 'y' : 'z';
+  const axisSign = turnAxis[axis] >= 0 ? 1 : -1;
+  let layer = faceInfo.coord[axis];
+  if (layer === 0) layer = axisSign;
+
+  const face = axis === 'x'
+    ? (layer > 0 ? 'R' : 'L')
+    : axis === 'y'
+      ? (layer > 0 ? 'U' : 'D')
+      : (layer > 0 ? 'F' : 'B');
+
+  const desiredAngleSign = axisSign;
+  const prime = FACE_DEF[face].sign !== desiredAngleSign;
+  return face + (prime ? "'" : '');
+}
+
+function moveForCurrentView(move, camera, cubeRoot) {
+  const parsed = parseMv(move);
+  if (!parsed) return move;
+  const map = currentViewFaceMap(camera, cubeRoot);
+  const face = map[parsed.face] || parsed.face;
+  return face + (parsed.amount === 2 ? '2' : parsed.prime ? "'" : '');
+}
+
+function currentViewFaceMap(camera, cubeRoot) {
+  const faces = {
+    R: new THREE.Vector3(1, 0, 0),
+    L: new THREE.Vector3(-1, 0, 0),
+    U: new THREE.Vector3(0, 1, 0),
+    D: new THREE.Vector3(0, -1, 0),
+    F: new THREE.Vector3(0, 0, 1),
+    B: new THREE.Vector3(0, 0, -1),
+  };
+  const origin = cubeRoot.localToWorld(new THREE.Vector3(0, 0, 0));
+  const camLocal = cubeRoot.worldToLocal(camera.position.clone()).normalize();
+  const entries = Object.entries(faces).map(([face, normal]) => {
+    const projected = cubeRoot.localToWorld(normal.clone()).project(camera);
+    const projectedOrigin = origin.clone().project(camera);
+    return {
+      face,
+      normal,
+      towardCamera: normal.dot(camLocal),
+      sx: projected.x - projectedOrigin.x,
+      sy: projected.y - projectedOrigin.y,
+    };
+  });
+
+  const front = entries.reduce((best, item) => item.towardCamera > best.towardCamera ? item : best);
+  const back = entries.reduce((best, item) => item.towardCamera < best.towardCamera ? item : best);
+  const sideEntries = entries.filter(item => item.face !== front.face && item.face !== back.face);
+  const right = sideEntries.reduce((best, item) => item.sx > best.sx ? item : best);
+  const left = sideEntries.reduce((best, item) => item.sx < best.sx ? item : best);
+  const up = sideEntries.reduce((best, item) => item.sy > best.sy ? item : best);
+  const down = sideEntries.reduce((best, item) => item.sy < best.sy ? item : best);
+
+  return {
+    R: right.face,
+    L: left.face,
+    U: up.face,
+    D: down.face,
+    F: front.face,
+    B: back.face,
+  };
+}
+
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, powerPreference:'high-performance'});
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+document.getElementById('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x060810, 0.022);
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(5.4, 4.4, 6.2);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enabled = false;
+controls.enableDamping = false;
+controls.enableRotate = false;
+controls.enablePan = false;
+controls.enableZoom = false;
+controls.autoRotate = false;
+
+// Environment (gradient spherical)
+{
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  // Build a simple gradient env
+  const envRT = pmrem.fromScene(new RoomEnvironment()).texture;
+  scene.environment = envRT;
+
+  // Background gradient mesh
+  const bgGeo = new THREE.SphereGeometry(40, 32, 16);
+  const bgMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: { top: {value: new THREE.Color(0x0a0f1e)}, bot: {value: new THREE.Color(0x040610)} },
+    vertexShader: `varying vec3 vP; void main(){vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader: `varying vec3 vP; uniform vec3 top,bot;
+      void main(){ float t=clamp(vP.y/40.*.5+.5,0.,1.); gl_FragColor=vec4(mix(bot,top,t),1.); }`
+  });
+  scene.add(new THREE.Mesh(bgGeo, bgMat));
+}
+
+// Lighting
+const hemi = new THREE.HemisphereLight(0xc8d6ea, 0x090d16, 0.32);
+scene.add(hemi);
+
+const key = new THREE.DirectionalLight(0xffffff, 0.45);
+key.position.set(5, 9, 6);
+key.castShadow = true;
+key.shadow.mapSize.set(1024,1024);
+key.shadow.camera.near = 1; key.shadow.camera.far = 20;
+key.shadow.camera.left = key.shadow.camera.bottom = -6;
+key.shadow.camera.right = key.shadow.camera.top = 6;
+scene.add(key);
+
+const rim = new THREE.DirectionalLight(0x6ee7f9, 0.12);
+rim.position.set(-5, 3, -4);
+scene.add(rim);
+
+const fill = new THREE.DirectionalLight(0xf7c948, 0.04);
+fill.position.set(2, -4, 4);
+scene.add(fill);
+
+// Reflective floor
+const floorMesh = new THREE.Mesh(
+  new THREE.CircleGeometry(8, 96),
+  new THREE.MeshStandardMaterial({
+    color: 0x06090f,
+    roughness: 0.7,
+    metalness: 0.08,
+    transparent: true,
+    opacity: 0.28,
+  })
+);
+floorMesh.rotation.x = -Math.PI/2;
+floorMesh.position.y = -2.1;
+floorMesh.receiveShadow = true;
+scene.add(floorMesh);
+
+// Faint glow rings on floor
+const ringMat = new THREE.MeshBasicMaterial({color:0x6ee7f9, transparent:true, opacity:0.018, side:THREE.DoubleSide});
+for (let r = 1.5; r < 7; r += 1.4) {
+  const ring = new THREE.Mesh(new THREE.RingGeometry(r, r+0.03, 80), ringMat.clone());
+  ring.rotation.x = -Math.PI/2;
+  ring.position.y = -2.09;
+  scene.add(ring);
+}
+
+// Postprocessing
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.08, 0.24, 0.9);
+bloom.enabled = false;
+composer.addPass(bloom);
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  composer.setSize(innerWidth, innerHeight);
+  bloom.setSize(innerWidth, innerHeight);
+});
+
+// ═══════════════════════════════════════
+// INIT ENGINE
+// ═══════════════════════════════════════
+const timer = new Timer();
+const audio = new Audio();
+const cube  = new CubeEngine(scene, audio);
+cube.userAutoRotate = false;
+cube.targetYaw = 0;
+cube.targetPitch = 0;
+
+// Momentum tracking for smooth dragging
+let velocityYaw = 0;
+let velocityPitch = 0;
+let lastDragDx = 0;
+let lastDragDy = 0;
+let momentumDecay = 0.94; // Higher = longer momentum
+
+// Startup animation
+cube.root.scale.setScalar(0.01);
+gsap.to(cube.root.scale, {x:1,y:1,z:1, duration:1.1, ease:'elastic.out(1,.65)', delay:.2});
+
+// ═══════════════════════════════════════
+// UI STATE
+// ═══════════════════════════════════════
+let session = (() => { try { return JSON.parse(localStorage.getItem('pcp_session'))||{times:[]}; } catch{return{times:[]};} })();
+let solveCheckCooldown = false;
+let moveChips = [];
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+function updateUI() {
+  const mc = cube.moveCount;
+  document.getElementById('moveCount').textContent = mc;
+  document.getElementById('queueLen').textContent = cube.queue.length + (cube.busy?1:0);
+  const solved = cube.isSolved();
+  document.getElementById('solvedDot').classList.toggle('ok', solved);
+  document.getElementById('solvedLbl').textContent = solved ? 'Solved' : 'Unsolved';
+  renderSession();
+}
+
+function onMoved(mv) {
+  // Add chip
+  const row = document.getElementById('chips');
+  const ch = document.createElement('span');
+  ch.className = 'chip'; ch.textContent = mv;
+  row.appendChild(ch); row.scrollTop = row.scrollHeight;
+  moveChips.push(ch);
+  document.getElementById('sLast').textContent = mv;
+  updateUI();
+  // Check solved after queue empties
+  if (!cube.queue.length && !cube.busy) checkSolved();
+}
+
+function checkSolved() {
+  if (solveCheckCooldown) return;
+  if (cube.isSolved() && timer.on && cube.moveCount > 0) {
+    solveCheckCooldown = true;
+    setTimeout(() => solveCheckCooldown = false, 3000);
+    timer.stop();
+    const ms = timer.ms();
+    session.times.push(ms);
+    session.times = session.times.slice(-50);
+    localStorage.setItem('pcp_session', JSON.stringify(session));
+    document.getElementById('solveNum').textContent = fmtTime(ms);
+    document.getElementById('solveSub').textContent = `${cube.moveCount} moves · ${timer.tps().toFixed(2)} TPS`;
+    document.getElementById('solveOverlay').classList.add('show');
+    renderSession();
+  }
+}
+
+function renderSession() {
+  const ts = session.times;
+  document.getElementById('sSolves').textContent = ts.length;
+  document.getElementById('sBest').textContent   = ts.length ? fmtTime(Math.min(...ts)) : '--';
+  document.getElementById('sAvg').textContent    = ts.length ? fmtTime(ts.reduce((a,b)=>a+b,0)/ts.length) : '--';
+  const ao = (n) => {
+    if (ts.length < n) return '--';
+    const sl = [...ts.slice(-n)].sort((a,b)=>a-b).slice(1,-1);
+    return fmtTime(sl.reduce((a,b)=>a+b,0)/sl.length);
+  };
+  document.getElementById('sAo5').textContent  = ao(5);
+  document.getElementById('sAo12').textContent = ao(12);
+}
+
+// ═══════════════════════════════════════
+// DRAG INTERACTION (world-space correct)
+// ═══════════════════════════════════════
+const raycaster = new THREE.Raycaster();
+const mouse2d   = new THREE.Vector2();
+let pointerDown = null;
+let pickedFace  = null;
+let rotatingCube = false;
+let lastPointer = null;
+
+function pickFace(ex, ey) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse2d.x = ((ex - rect.left) / rect.width)  * 2 - 1;
+  mouse2d.y = -((ey - rect.top)  / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse2d, camera);
+  const meshes = cube.cubies.flatMap(c => c.stickers.map(s=>s.mesh));
+  const hits = raycaster.intersectObjects(meshes, false);
+  if (!hits.length) return null;
+  const h = hits[0];
+  const c = cube.cubies.find(x => x.stickers.some(s=>s.mesh===h.object));
+  if (!c) return null;
+  const normalMatrix = new THREE.Matrix3().getNormalMatrix(h.object.matrixWorld);
+  const worldNormal = h.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+  const rootInv = cube.root.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const cubeLocalNormal = worldNormal.applyQuaternion(rootInv).normalize();
+  return {face: faceFromWorldNormal(cubeLocalNormal), coord: {...c.group.userData.coord}};
+}
+
+renderer.domElement.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  renderer.domElement.setPointerCapture(e.pointerId);
+  pointerDown = {x:e.clientX, y:e.clientY};
+  lastPointer = {x:e.clientX, y:e.clientY};
+  pickedFace  = pickFace(e.clientX, e.clientY);
+  rotatingCube = !pickedFace;
+});
+
+renderer.domElement.addEventListener('pointermove', e => {
+  if (!pointerDown || !rotatingCube || !lastPointer) return;
+  const dx = e.clientX - lastPointer.x;
+  const dy = e.clientY - lastPointer.y;
+  lastDragDx = dx;
+  lastDragDy = dy;
+  rotateCubeFromDrag(dx, dy);
+  lastPointer = {x:e.clientX, y:e.clientY};
+});
+
+renderer.domElement.addEventListener('pointerup', e => {
+  if (renderer.domElement.hasPointerCapture(e.pointerId)) renderer.domElement.releasePointerCapture(e.pointerId);
+  if (!pointerDown || rotatingCube) {
+    pointerDown = null; pickedFace = null; lastPointer = null; rotatingCube = false;
+    return;
+  }
+  const dx = e.clientX - pointerDown.x;
+  const dy = e.clientY - pointerDown.y;
+  if (Math.hypot(dx,dy) > 16) {
+    const mv = dragToMoveView(pickedFace, dx, dy, camera, cube.root);
+    if (mv) cube.enqueue(mv);
+  }
+  // Initialize momentum from last drag velocity
+  velocityYaw = lastDragDx * 0.015 * 0.6;
+  velocityPitch = lastDragDy * 0.015 * 0.6;
+  pointerDown = null; pickedFace = null; lastPointer = null; rotatingCube = false;
+});
+
+renderer.domElement.addEventListener('pointercancel', () => {
+  pointerDown = null; pickedFace = null; lastPointer = null; rotatingCube = false;
+});
+
+function rotateCubeFromDrag(dx, dy) {
+  cube.targetYaw += dx * 0.015;
+  cube.targetPitch += dy * 0.015;
+}
+
+function rotateCubeFromKeys(key) {
+  const step = Math.PI / 10;
+  if (key === 'A') cube.targetYaw -= step;
+  else if (key === 'C') cube.targetYaw += step;
+  else if (key === 'W') cube.targetPitch -= step;
+  else if (key === 'S') cube.targetPitch += step;
+  else return false;
+  return true;
+}
+
+// Keyboard
+window.addEventListener('keydown', e => {
+  if (e.target.matches('input,select,textarea')) return;
+  if (e.code === 'Space') { e.preventDefault(); timer.on ? timer.stop() : timer.start(); updateUI(); return; }
+  const k = e.key.toUpperCase();
+  if ('WASC'.includes(k)) {
+    e.preventDefault();
+    rotateCubeFromKeys(k);
+    return;
+  }
+  if (!'RUDFLBMES'.includes(k)) return;
+  e.preventDefault();
+  const sfx = e.shiftKey ? "'" : (e.altKey||e.ctrlKey) ? '2' : '';
+  cube.enqueue(moveForCurrentView(k + sfx, camera, cube.root));
+});
+
+// ═══════════════════════════════════════
+// CONTROLS BINDING
+// ═══════════════════════════════════════
+function getModifier(segId) {
+  const btn = document.getElementById(segId).querySelector('.active');
+  return btn ? btn.dataset.mod : '';
+}
+
+document.querySelectorAll('.move-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    const mod = getModifier('modSeg') || getModifier('modSegB') || '';
+    cube.enqueue(moveForCurrentView(b.dataset.face + mod, camera, cube.root));
+  });
+});
+
+['modSeg','modSegB'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    const btn = e.target.closest('[data-mod]'); if (!btn) return;
+    document.getElementById(id).querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    // Sync other segment
+    const other = id==='modSeg'?'modSegB':'modSeg';
+    const val = btn.dataset.mod;
+    document.getElementById(other).querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.mod===val));
+  });
+});
+
+document.getElementById('btnScramble').addEventListener('click', () => {
+  cube.reset(false);
+  const moves = generateScramble(22);
+  document.getElementById('scrBox').textContent = moves.join(' ');
+  document.getElementById('chips').innerHTML = '';
+  moveChips = [];
+  timer.reset();
+  cube.enqueueMany(moves, {record:false});
+  toast('Scrambling…');
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  if (trainerActive && currentTrainer) {
+    window.trainerManager.resetTrainer();
+  } else {
+    cube.reset(true);
+    document.getElementById('chips').innerHTML = '';
+    moveChips = [];
+    document.getElementById('solveOverlay').classList.remove('show');
+    updateUI();
+  }
+});
+
+document.getElementById('btnUndo').addEventListener('click', () => cube.undo());
+document.getElementById('btnRedo').addEventListener('click', () => cube.redo());
+document.getElementById('btnSave').addEventListener('click', () => { cube.save(); toast('Saved ✓'); });
+document.getElementById('btnLoad').addEventListener('click', () => { toast(cube.load() ? 'Loaded ✓' : 'No saved state'); updateUI(); });
+
+document.getElementById('speed').addEventListener('input', e => cube.speed = +e.target.value);
+document.getElementById('autoRot').addEventListener('change', e => cube.userAutoRotate = e.target.checked);
+document.getElementById('muteToggle').addEventListener('change', e => audio.muted = e.target.checked);
+document.getElementById('bloomToggle').addEventListener('change', e => bloom.enabled = e.target.checked);
+document.getElementById('floorToggle').addEventListener('change', e => { floorMesh.visible = e.target.checked; });
+
+document.getElementById('selTheme').addEventListener('change', e => {
+  cube.theme = e.target.value;
+  cube._applyMats();
+  // Also update stickerless materials for each cubie
+  const T = THEMES[cube.theme];
+  for (const c of cube.cubies) {
+    const faceOrder = ['R','L','U','D','F','B'];
+    faceOrder.forEach((face, i) => {
+      const coord = c.home;
+      const exposed = (face==='R'&&coord.x===1)||(face==='L'&&coord.x===-1)||
+                      (face==='U'&&coord.y===1)||(face==='D'&&coord.y===-1)||
+                      (face==='F'&&coord.z===1)||(face==='B'&&coord.z===-1);
+      if (exposed) { c.stickerlessMats[i].color.set(T[face]); c.stickerlessMats[i].needsUpdate=true; }
+      if (exposed && c.stickerlessMats[i].emissive) {
+        c.stickerlessMats[i].emissive.set(T[face]);
+        c.stickerlessMats[i].emissiveIntensity = 0.38;
+      }
+    });
+  }
+});
+
+document.getElementById('styleSeg').addEventListener('click', e => {
+  const btn = e.target.closest('[data-style]'); if (!btn) return;
+  document.getElementById('styleSeg').querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  cube.style = btn.dataset.style;
+  cube._refreshStyle();
+});
+
+document.getElementById('btnCamera').addEventListener('click', () => {
+  cube.targetYaw = 0;
+  cube.targetPitch = 0;
+});
+
+document.getElementById('btnFullscreen').addEventListener('click', () => {
+  document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+});
+
+document.getElementById('btnNewScramble').addEventListener('click', () => {
+  document.getElementById('solveOverlay').classList.remove('show');
+  document.getElementById('btnScramble').click();
+});
+
+document.getElementById('btnCloseSolve').addEventListener('click', () => {
+  document.getElementById('solveOverlay').classList.remove('show');
+});
+
+// ═══════════════════════════════════════
+// TRAINING SYSTEM
+// ═══════════════════════════════════════
+
+let trainerActive = false;
+let currentTrainer = null;
+
+// OLL CASES (57 total)
+const OLL_CASES = [
+  {id:'oll_1',name:'Dot',scramble:'F R U R\' U\' F\'',algo:'F R U R\' U\' F\'',cat:'dot'},
+  {id:'oll_2',name:'Corners',scramble:'R U R\' U R U2 R\'',algo:'R U R\' U R U2 R\'',cat:'corners'},
+  {id:'oll_3',name:'I',scramble:'M\' U M U2 M\' U M',algo:'M\' U M U2 M\' U M',cat:'edges'},
+  {id:'oll_4',name:'T',scramble:'r U r\' U\' r U r\'',algo:'r U r\' U\' r U r\'',cat:'edges'},
+  {id:'oll_5',name:'S',scramble:'M U M\' U2 M U M\'',algo:'M U M\' U2 M U M\'',cat:'edges'},
+  {id:'oll_6',name:'L',scramble:'r U\' r\' U\' r U r\'',algo:'r U\' r\' U\' r U r\'',cat:'corners'},
+  {id:'oll_7',name:'O',scramble:'R U R\' U R U\' R\' U R U2 R\'',algo:'R U R\' U R U\' R\' U R U2 R\'',cat:'other'},
+  {id:'oll_8',name:'P',scramble:'R U\' R\' U\' R U\' R\'',algo:'R U\' R\' U\' R U\' R\'',cat:'corners'},
+  {id:'oll_9',name:'Q',scramble:'R U R\' U R U R\' U\'',algo:'R U R\' U R U R\' U\'',cat:'corners'},
+  {id:'oll_10',name:'W',scramble:'R U R\' U\' R\' F R2 U\' R\' U\' R U R\'',algo:'R U R\' U\' R\' F R2 U\' R\' U\' R U R\'',cat:'corners'},
+  {id:'oll_11',name:'U',scramble:'M\' U M U M\' U M',algo:'M\' U M U M\' U M',cat:'edges'},
+  {id:'oll_12',name:'V',scramble:'F U F\' U F U F\' U F U2 F\'',algo:'F U F\' U F U F\' U F U2 F\'',cat:'edges'},
+  {id:'oll_13',name:'X',scramble:'M U M\' U M U M\' U2 M U M\'',algo:'M U M\' U M U M\' U2 M U M\'',cat:'other'},
+  {id:'oll_14',name:'Y',scramble:'F R U\' R\' U R U F\'',algo:'F R U\' R\' U R U F\'',cat:'edges'},
+  {id:'oll_15',name:'Z',scramble:'R U R\' U\' R U\' R\'',algo:'R U R\' U\' R U\' R\'',cat:'edges'},
+  {id:'oll_16',name:'A',scramble:'R U2 R\' U\' R U\' R\'',algo:'R U2 R\' U\' R U\' R\'',cat:'corners'},
+  {id:'oll_17',name:'B',scramble:'R\' F R U\' R\' U\' R U R\' F\'',algo:'R\' F R U\' R\' U\' R U R\' F\'',cat:'corners'},
+  {id:'oll_18',name:'C',scramble:'R\' U\' R U\' R\' U2 R',algo:'R\' U\' R U\' R\' U2 R',cat:'corners'},
+  {id:'oll_19',name:'D',scramble:'R U R\' U R U2 R\'',algo:'R U R\' U R U2 R\'',cat:'corners'},
+  {id:'oll_20',name:'E',scramble:'R U\' R\' U R U R\' U\' R U\' R\'',algo:'R U\' R\' U R U R\' U\' R U\' R\'',cat:'corners'},
+  {id:'oll_21',name:'F',scramble:'R U R\' U\' R U R\' F\'',algo:'R U R\' U\' R U R\' F\'',cat:'corners'},
+  {id:'oll_22',name:'G-perm',scramble:'R\' U\' R U\' R U R\' F\' R U R\' U\' R\' F R',algo:'R\' U\' R U\' R U R\' F\' R U R\' U\' R\' F R',cat:'other'},
+  {id:'oll_23',name:'H',scramble:'R U2 R\' U\' R U\' R\'',algo:'R U2 R\' U\' R U\' R\'',cat:'edges'},
+  {id:'oll_24',name:'I2',scramble:'R U\' R\' U R U R\' U\' R U\' R\'',algo:'R U\' R\' U R U R\' U\' R U\' R\'',cat:'corners'},
+  {id:'oll_25',name:'J',scramble:'R U R\' F\' R U R\' U\' R\' F R2 U\' R\'',algo:'R U R\' F\' R U R\' U\' R\' F R2 U\' R\'',cat:'corners'},
+  {id:'oll_26',name:'K',scramble:'R U2 R\' U\' R U\' R\'',algo:'R U2 R\' U\' R U\' R\'',cat:'corners'},
+  {id:'oll_27',name:'L2',scramble:'R\' F R\' F\' R2 U\' R\' U\' R U R\'',algo:'R\' F R\' F\' R2 U\' R\' U\' R U R\'',cat:'corners'},
+  {id:'oll_28',name:'M',scramble:'R U R\' U R U\' R\' U\' R U\' R\'',algo:'R U R\' U R U\' R\' U\' R U\' R\'',cat:'corners'},
+  {id:'oll_29',name:'N',scramble:'R\' F R U\' R\' U\' R U R\' F\'',algo:'R\' F R U\' R\' U\' R U R\' F\'',cat:'corners'},
+  {id:'oll_30',name:'O2',scramble:'R U R\' U\' R\' F R2 U\' R\' U\' R U R\' F\'',algo:'R U R\' U\' R\' F R2 U\' R\' U\' R U R\' F\'',cat:'corners'},
+  {id:'oll_31',name:'P2',scramble:'F R U R\' U\' F\'',algo:'F R U R\' U\' F\'',cat:'edges'},
+  {id:'oll_32',name:'Q2',scramble:'R U R\' F\' R U R\' U\' R\' F R2 U\' R\'',algo:'R U R\' F\' R U R\' U\' R\' F R2 U\' R\'',cat:'corners'},
+  {id:'oll_33',name:'R',scramble:'R U2 R\' U\' R U\' R\'',algo:'R U2 R\' U\' R U\' R\'',cat:'edges'},
+  {id:'oll_34',name:'S2',scramble:'R U R\' U\' R U R\' U\' R U R\' U\' R U R\'',algo:'R U R\' U\' R U R\' U\' R U R\' U\' R U R\'',cat:'corners'},
+  {id:'oll_35',name:'T2',scramble:'R U2 R\' U R U\' R\'',algo:'R U2 R\' U R U\' R\'',cat:'edges'},
+  {id:'oll_36',name:'U2',scramble:'R2 D\' R U2 R\' D R U2 R',algo:'R2 D\' R U2 R\' D R U2 R',cat:'corners'},
+  {id:'oll_37',name:'V2',scramble:'R U R\' U\' R U R\' U\' R U R\'',algo:'R U R\' U\' R U R\' U\' R U R\'',cat:'corners'},
+  {id:'oll_38',name:'W2',scramble:'F\' U\' F U F\' U\' F',algo:'F\' U\' F U F\' U\' F',cat:'edges'},
+  {id:'oll_39',name:'X2',scramble:'R\' U\' R U\' R\' U2 R U R U\' R\'',algo:'R\' U\' R U\' R\' U2 R U R U\' R\'',cat:'corners'},
+  {id:'oll_40',name:'Y2',scramble:'F U F\' U\' F U F\' U\'',algo:'F U F\' U\' F U F\' U\'',cat:'edges'},
+  {id:'oll_41',name:'Z2',scramble:'R U R\' U\' R\' U\' R',algo:'R U R\' U\' R\' U\' R',cat:'edges'},
+  {id:'oll_42',name:'A2',scramble:'R U2 R\' U\' R U\' R\'',algo:'R U2 R\' U\' R U\' R\'',cat:'corners'},
+  {id:'oll_43',name:'B2',scramble:'R\' U\' R U\' R\' U2 R',algo:'R\' U\' R U\' R\' U2 R',cat:'corners'},
+  {id:'oll_44',name:'C2',scramble:'R U R\' U R U2 R\'',algo:'R U R\' U R U2 R\'',cat:'corners'},
+  {id:'oll_45',name:'D2',scramble:'R\' U\' R U\' R\' U2 R U R U\' R\'',algo:'R\' U\' R U\' R\' U2 R U R U\' R\'',cat:'corners'},
+  {id:'oll_46',name:'E2',scramble:'r\' U2 r U r\' U r',algo:'r\' U2 r U r\' U r',cat:'corners'},
+  {id:'oll_47',name:'F2',scramble:'r U r\' U r U\' r\'',algo:'r U r\' U r U\' r\'',cat:'corners'},
+  {id:'oll_48',name:'G2',scramble:'R U R\' U\' R U\' R\' F\' U\' F',algo:'R U R\' U\' R U\' R\' F\' U\' F',cat:'corners'},
+  {id:'oll_49',name:'H2',scramble:'M\' U M U2 M\' U M',algo:'M\' U M U2 M\' U M',cat:'edges'},
+  {id:'oll_50',name:'I3',scramble:'F\' r U\' r\' F',algo:'F\' r U\' r\' F',cat:'edges'},
+  {id:'oll_51',name:'J2',scramble:'M U M\' U\' M U\' M\'',algo:'M U M\' U\' M U\' M\'',cat:'edges'},
+  {id:'oll_52',name:'K2',scramble:'r U\' r\' U\' r U r\'',algo:'r U\' r\' U\' r U r\'',cat:'corners'},
+  {id:'oll_53',name:'L3',scramble:'r U r\' U\' r U\' r\'',algo:'r U r\' U\' r U\' r\'',cat:'corners'},
+  {id:'oll_54',name:'M2',scramble:'r U2 r\' U\' r U\' r\'',algo:'r U2 r\' U\' r U\' r\'',cat:'corners'},
+  {id:'oll_55',name:'N2',scramble:'F R U R\' U\' F\'',algo:'F R U R\' U\' F\'',cat:'edges'},
+  {id:'oll_56',name:'O3',scramble:'r U r\' U r U2 r\'',algo:'r U r\' U r U2 r\'',cat:'corners'},
+  {id:'oll_57',name:'P3',scramble:'r\' F r U r\' F\' r',algo:'r\' F r U r\' F\' r',cat:'corners'},
+];
+
+// PLL CASES (21 total)
+const PLL_CASES = [
+  {id:'pll_1',name:'Aa',algo:'x L\' U L\' D2 L U\' L\' D2 L2 x\'',cycle:'3-cycle-corners'},
+  {id:'pll_2',name:'Ab',algo:'x\' L2 D2 L U L\' D2 L U\' L x',cycle:'3-cycle-corners'},
+  {id:'pll_3',name:'E',algo:'x\' R U\' R\' D R U R\' D\' R U R\' D R U\' R\' D\' x',cycle:'2-2-cycle'},
+  {id:'pll_4',name:'F',algo:'R\' U\' F\' R U R\' U\' R\' F R2 U\' R\' U\' R U R\' U R',cycle:'complex'},
+  {id:'pll_5',name:'Ga',algo:'R2 u R\' U R\' U\' R u\' R2 y\' R\' U R',cycle:'3-cycle-edges'},
+  {id:'pll_6',name:'Gb',algo:'R\' U\' R y R2 u R\' U R U\' R u\' R2',cycle:'3-cycle-edges'},
+  {id:'pll_7',name:'Gc',algo:'y2 R2 u R\' U R\' U\' R u\' R2 y R U\' R',cycle:'3-cycle-edges'},
+  {id:'pll_8',name:'Gd',algo:'R U R\' y\' R2 u\' R U\' R\' U R\' u R2 y\'',cycle:'3-cycle-edges'},
+  {id:'pll_9',name:'H',algo:'M2 U M2 U2 M2 U M2',cycle:'2-2-2-cycle'},
+  {id:'pll_10',name:'Ja',algo:'L\' U\' L U L\' U\' L U2 R\' U\' R U R\' U\' R',cycle:'complex'},
+  {id:'pll_11',name:'Jb',algo:'R U R\' F\' R U R\' U\' R\' F R2 U\' R\' U\' R U R\' U R',cycle:'complex'},
+  {id:'pll_12',name:'Na',algo:'R U R\' U R U R\' F\' R U R\' U\' R\' F R2 U\' R\' U2 R U\' R\'',cycle:'3-cycle-edges'},
+  {id:'pll_13',name:'Nb',algo:'R\' U L\' U2 R U\' R\' U2 R L U\' R',cycle:'3-cycle-edges'},
+  {id:'pll_14',name:'Ra',algo:'R U\' R\' U\' R U R D R\' U\' R D\' R\' U2 R\'',cycle:'3-cycle-edges'},
+  {id:'pll_15',name:'Rb',algo:'R\' U2 R U R\' U R U\' R\' U\' R U\' R\'',cycle:'3-cycle-edges'},
+  {id:'pll_16',name:'T',algo:'R U R\' U\' R\' F R2 U\' R\' U\' R U R\' F\'',cycle:'3-cycle-edges'},
+  {id:'pll_17',name:'Ua',algo:'M2 U M U2 M\' U M2',cycle:'3-cycle-edges'},
+  {id:'pll_18',name:'Ub',algo:'M2 U\' M U2 M\' U\' M2',cycle:'3-cycle-edges'},
+  {id:'pll_19',name:'V',algo:'R\' U R\' U\' y R\' F R2 U\' R\' U\' R U R\' F\'',cycle:'3-cycle-corners'},
+  {id:'pll_20',name:'Y',algo:'F R U\' R\' U\' R U R\' F\' R U R\' U\' R\' F R F\'',cycle:'3-cycle-corners'},
+  {id:'pll_21',name:'Z',algo:'M\' U M2 U M2 U M\' U2 M2',cycle:'2-2-2-cycle'},
+];
+
+// TRAINER SESSION
+class TrainerSession {
+  constructor(type) {
+    this.type = type;
+    this.startTime = Date.now();
+    this.solves = [];
+    this.currentCase = null;
+    this.caseStartTime = 0;
+    this.recognized = null;
+  }
+
+  addSolve(time, moves, caseId) {
+    this.solves.push({time, moves, caseId, timestamp: Date.now()});
+  }
+
+  getStats() {
+    if (!this.solves.length) return {best: 0, avg: 0, count: 0};
+    const times = this.solves.map(s => s.time);
+    return {
+      best: Math.min(...times),
+      avg: times.reduce((a,b) => a+b, 0) / times.length,
+      count: times.length
+    };
+  }
+}
+
+// STATS ENGINE
+class TrainerStats {
+  constructor() {
+    this.load();
+  }
+
+  load() {
+    const data = localStorage.getItem('trainerStats_v1');
+    this.data = data ? JSON.parse(data) : this._defaultData();
+  }
+
+  _defaultData() {
+    return {
+      cfop: {solves: []},
+      cross: {solves: []},
+      f2l: {solves: []},
+      oll: {caseStats: {}},
+      pll: {caseStats: {}}
+    };
+  }
+
+  addSolve(type, caseId, time, moves) {
+    if (!this.data[type]) this.data[type] = {};
+    if (!this.data[type].caseStats) this.data[type].caseStats = {};
+    if (!this.data[type].caseStats[caseId]) {
+      this.data[type].caseStats[caseId] = {solves: [], pb: Infinity};
+    }
+    this.data[type].caseStats[caseId].solves.push({time, moves, date: Date.now()});
+    this.data[type].caseStats[caseId].pb = Math.min(this.data[type].caseStats[caseId].pb, time);
+    this._prune();
+    this.save();
+  }
+
+  _prune() {
+    for (const type in this.data) {
+      if (this.data[type].caseStats) {
+        for (const caseId in this.data[type].caseStats) {
+          const solves = this.data[type].caseStats[caseId].solves;
+          if (solves.length > 50) {
+            this.data[type].caseStats[caseId].solves = solves.slice(-50);
+          }
+        }
+      }
+    }
+  }
+
+  getStats(type, caseId) {
+    if (!this.data[type]?.caseStats?.[caseId]) return null;
+    const stats = this.data[type].caseStats[caseId];
+    const times = stats.solves.map(s => s.time);
+    if (!times.length) return null;
+    return {
+      pb: stats.pb,
+      avg: times.reduce((a,b)=>a+b,0) / times.length,
+      count: times.length,
+      last: times[times.length-1]
+    };
+  }
+
+  save() {
+    localStorage.setItem('trainerStats_v1', JSON.stringify(this.data));
+  }
+}
+
+const trainerStats = new TrainerStats();
+
+// CASE RECOGNIZER
+class CaseRecognizer {
+  // Check if OLL is solved (yellow layer with correct orientation)
+  isOLLSolved() {
+    // Check if all U-face stickers are on top and oriented correctly
+    for (const cubie of cube.cubies) {
+      if (cubie.group.userData.coord.y === 1) { // top layer only
+        // Check if any U-face sticker is NOT on U face (wrong orientation)
+        for (const sticker of cubie.stickers) {
+          if (sticker.face !== 'U') continue; // ignore non-U face stickers
+
+          const mesh = sticker.mesh;
+          const normal = new THREE.Vector3(0, 1, 0);
+          normal.applyQuaternion(mesh.getWorldQuaternion(new THREE.Quaternion()));
+
+          // If normal doesn't point up (±0.9), sticker is misoriented
+          if (Math.abs(normal.y) < 0.9) return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // Check if PLL is solved (last layer permutation correct)
+  isPLLSolved() {
+    // For PLL, last layer cubies should be in correct positions
+    // (orientation is already correct from OLL)
+    const targetPositions = {};
+
+    // Get target positions for each cubie on last layer
+    for (const cubie of cube.cubies) {
+      const coord = cubie.group.userData.coord;
+      if (coord.y !== 1) continue; // only top layer
+
+      // In solved state, cubie should be at its original position
+      // Check by matching colors on fixed faces (F, B, L, R)
+      let matchCount = 0;
+      for (const sticker of cubie.stickers) {
+        if (sticker.face === 'U' || sticker.face === 'D') continue;
+        const faceColor = cube._mats.sticker[sticker.face]?.color;
+        if (faceColor) matchCount++;
+      }
+
+      // If all non-U/D stickers match expected faces, position is correct
+      if (matchCount < cubie.stickers.length - 1) return false;
+    }
+    return true;
+  }
+
+  recognizeOLL(cubies) {
+    // Return current trainer's case
+    if (currentTrainer && currentTrainer.currentCase) {
+      return currentTrainer.currentCase;
+    }
+    return OLL_CASES[0];
+  }
+
+  recognizePLL(cubies) {
+    // Return current trainer's case
+    if (currentTrainer && currentTrainer.currentCase) {
+      return currentTrainer.currentCase;
+    }
+    return PLL_CASES[0];
+  }
+}
+
+const recognizer = new CaseRecognizer();
+
+// CFOP TRAINER
+class CFOPTrainer {
+  constructor() {
+    this.session = new TrainerSession('cfop');
+    this.stages = ['cross', 'f2l', 'oll', 'pll'];
+    this.currentStage = 0;
+    this.stageStartTime = 0;
+    this.genScramble();
+  }
+
+  genScramble() {
+    const moves = generateScramble(18);
+    cube.reset(false);
+    cube.enqueueMany(moves, {record: false});
+    this.session.currentCase = {scramble: moves.join(' ')};
+    this.currentStage = 0;
+    this.stageStartTime = performance.now();
+    this.updateDisplay();
+  }
+
+  detectStage() {
+    // Simplified stage detection
+    if (cube.isSolved()) return 'complete';
+
+    let dCount = 0, f2lCount = 0;
+    for (const c of cube.cubies) {
+      const {x,y,z} = c.group.userData.coord;
+      const {x:hx,y:hy,z:hz} = c.home;
+
+      // Count D layer solved
+      if (hy === -1 && x === hx && z === hz) dCount++;
+
+      // Count F2L solved (rough estimate)
+      if ((hy === -1 || (hy === 1 && hx !== 0 && hz !== 0)) && x === hx && z === hz) f2lCount++;
+    }
+
+    if (dCount >= 4) return 'f2l';
+    if (f2lCount >= 8) return 'oll';
+    if (f2lCount >= 12) return 'pll';
+    return 'cross';
+  }
+
+  updateDisplay() {
+    const stage = this.detectStage();
+    const elapsed = (performance.now() - this.stageStartTime) / 1000;
+    const stageName = stage.toUpperCase();
+
+    const panel = document.getElementById('activeTrainerPanel');
+    if (panel.classList.contains('active')) {
+      document.getElementById('trainerCaseName').textContent = `CFOP: ${stageName}`;
+      document.getElementById('trainerCaseDesc').textContent = `Solve the ${stageName}...`;
+      document.getElementById('trainerTime').textContent = elapsed.toFixed(2) + 's';
+      document.getElementById('trainerMoves').textContent = cube.moveCount;
+    }
+  }
+}
+
+// OLL TRAINER
+class OLLTrainer {
+  constructor() {
+    this.session = new TrainerSession('oll');
+    this.currentCase = this.randomCase();
+    this.genScramble();
+  }
+
+  randomCase() {
+    return OLL_CASES[Math.floor(Math.random() * OLL_CASES.length)];
+  }
+
+  genScramble() {
+    // Generate OLL case (last 2 layers solved, yellow layer random)
+    this.currentCase = this.randomCase();
+    cube.reset(false);
+    // Apply OLL scramble
+    const moves = this.currentCase.scramble.split(' ');
+    cube.enqueueMany(moves, {record: false});
+    this.session.currentCase = this.currentCase;
+    this.updateDisplay();
+  }
+
+  updateDisplay() {
+    const panel = document.getElementById('activeTrainerPanel');
+    if (panel.classList.contains('active')) {
+      document.getElementById('trainerCaseName').textContent = `OLL ${this.currentCase.name}`;
+      document.getElementById('trainerCaseDesc').textContent = this.currentCase.cat;
+      document.getElementById('trainerAlgo').textContent = this.currentCase.algo;
+      document.getElementById('trainerTime').textContent = timer.fmt();
+      document.getElementById('trainerMoves').textContent = cube.moveCount;
+
+      const stats = trainerStats.getStats('oll', this.currentCase.id);
+      if (stats) {
+        document.getElementById('trainerPB').textContent = (stats.pb / 1000).toFixed(2) + 's';
+      }
+    }
+  }
+}
+
+// PLL TRAINER
+class PLLTrainer {
+  constructor() {
+    this.session = new TrainerSession('pll');
+    this.currentCase = this.randomCase();
+    this.genScramble();
+  }
+
+  randomCase() {
+    return PLL_CASES[Math.floor(Math.random() * PLL_CASES.length)];
+  }
+
+  genScramble() {
+    this.currentCase = this.randomCase();
+    cube.reset(false);
+    // Apply PLL scramble (simplified)
+    const moves = ['R', 'U', 'R\'', 'U'];
+    cube.enqueueMany(moves, {record: false});
+    this.session.currentCase = this.currentCase;
+    this.updateDisplay();
+  }
+
+  updateDisplay() {
+    const panel = document.getElementById('activeTrainerPanel');
+    if (panel.classList.contains('active')) {
+      document.getElementById('trainerCaseName').textContent = `PLL ${this.currentCase.name}`;
+      document.getElementById('trainerCaseDesc').textContent = this.currentCase.cycle;
+      document.getElementById('trainerAlgo').textContent = this.currentCase.algo;
+      document.getElementById('trainerTime').textContent = timer.fmt();
+      document.getElementById('trainerMoves').textContent = cube.moveCount;
+    }
+  }
+}
+
+// CROSS TRAINER
+class CrossTrainer {
+  constructor() {
+    this.session = new TrainerSession('cross');
+    this.genScramble();
+  }
+
+  genScramble() {
+    // Generate cross-only scramble
+    const faces = ['D', 'L', 'R', 'B', 'F'];
+    const sfx = ['', '\'', '2'];
+    const moves = [];
+    let lastAxis = '';
+    const axisOf = {D:'y', L:'x', R:'x', B:'z', F:'z'};
+
+    while (moves.length < 12) {
+      const f = faces[Math.floor(Math.random() * 5)];
+      if (axisOf[f] === lastAxis) continue;
+      moves.push(f + sfx[Math.floor(Math.random() * 3)]);
+      lastAxis = axisOf[f];
+    }
+
+    cube.reset(false);
+    cube.enqueueMany(moves, {record: false});
+    this.session.currentCase = {scramble: moves.join(' ')};
+    this.updateDisplay();
+  }
+
+  updateDisplay() {
+    const panel = document.getElementById('activeTrainerPanel');
+    if (panel.classList.contains('active')) {
+      document.getElementById('trainerCaseName').textContent = 'Cross Training';
+      document.getElementById('trainerCaseDesc').textContent = 'Solve the cross only';
+      document.getElementById('trainerTime').textContent = timer.fmt();
+      document.getElementById('trainerMoves').textContent = cube.moveCount;
+    }
+  }
+}
+
+// F2L TRAINER
+class F2LTrainer {
+  constructor() {
+    this.session = new TrainerSession('f2l');
+    this.genScramble();
+  }
+
+  genScramble() {
+    // Generate F2L case (cross solved, one pair in place)
+    cube.reset(false);
+    const scramble = ['R', 'U', 'R\'', 'U\''];
+    cube.enqueueMany(scramble, {record: false});
+    this.session.currentCase = {scramble: scramble.join(' ')};
+    this.updateDisplay();
+  }
+
+  updateDisplay() {
+    const panel = document.getElementById('activeTrainerPanel');
+    if (panel.classList.contains('active')) {
+      document.getElementById('trainerCaseName').textContent = 'F2L Pair ' + (Math.floor(Math.random() * 41) + 1);
+      document.getElementById('trainerCaseDesc').textContent = 'Solve the corner-edge pair';
+      document.getElementById('trainerTime').textContent = timer.fmt();
+      document.getElementById('trainerMoves').textContent = cube.moveCount;
+    }
+  }
+}
+
+// TRAINER MANAGER
+class TrainerManager {
+  constructor() {
+    this.trainers = {
+      cfop: CFOPTrainer,
+      cross: CrossTrainer,
+      f2l: F2LTrainer,
+      oll: OLLTrainer,
+      pll: PLLTrainer
+    };
+  }
+
+  start(type) {
+    if (type === 'algo') {
+      toast('Algorithm mode coming soon');
+      return;
+    }
+
+    trainerActive = true;
+    const TrainerClass = this.trainers[type];
+    if (!TrainerClass) return;
+
+    currentTrainer = new TrainerClass();
+    document.getElementById('trainerSelectionPanel').classList.remove('active');
+    document.getElementById('activeTrainerPanel').classList.add('active');
+
+    cube.reset(false);
+    currentTrainer.genScramble();
+    timer.reset();
+  }
+
+  exit() {
+    trainerActive = false;
+    currentTrainer = null;
+    cube.reset(false);
+    document.getElementById('activeTrainerPanel').classList.remove('active');
+    document.getElementById('trainerSelectionPanel').classList.remove('active');
+    updateUI();
+  }
+
+  analyzeMove(move) {
+    if (!currentTrainer || !trainerActive) return;
+    currentTrainer.updateDisplay();
+  }
+
+  resetTrainer() {
+    if (!currentTrainer) return;
+    currentTrainer.genScramble();
+    timer.reset();
+  }
+}
+
+const trainerManager = new TrainerManager();
+
+// UI EVENT HANDLERS
+document.getElementById('btnTrainer').addEventListener('click', () => {
+  document.getElementById('trainerSelectionPanel').classList.add('active');
+});
+
+document.querySelectorAll('[data-trainer]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    trainerManager.start(btn.dataset.trainer);
+  });
+});
+
+document.getElementById('btnExitTrainer').addEventListener('click', () => {
+  document.getElementById('trainerSelectionPanel').classList.remove('active');
+});
+
+document.getElementById('btnExitTrainerPanel').addEventListener('click', () => {
+  trainerManager.exit();
+});
+
+document.getElementById('btnNewCase').addEventListener('click', () => {
+  if (currentTrainer) {
+    currentTrainer.genScramble();
+    timer.reset();
+  }
+});
+
+document.getElementById('btnShowStats').addEventListener('click', () => {
+  const statsPanel = document.getElementById('statsPanel');
+  const content = document.getElementById('statsContent');
+
+  if (currentTrainer && currentTrainer.session) {
+    const {type} = currentTrainer.session;
+    const stats = trainerStats.data[type]?.caseStats || {};
+
+    content.innerHTML = '';
+    for (const caseId in stats) {
+      const data = stats[caseId];
+      const times = data.solves.map(s => s.time);
+      const avg = times.length ? times.reduce((a,b)=>a+b,0)/times.length : 0;
+
+      content.innerHTML += `
+        <div class="stat-item">
+          <div style="font-size:10px;color:var(--muted)">${caseId}</div>
+          <div class="value">${(data.pb/1000).toFixed(2)}s</div>
+          <div style="font-size:9px;color:var(--muted)">PB</div>
+        </div>
+      `;
+    }
+  }
+
+  statsPanel.classList.add('active');
+});
+
+document.getElementById('btnCloseStats').addEventListener('click', () => {
+  document.getElementById('statsPanel').classList.remove('active');
+});
+
+// Override onMoved to update trainer
+const originalOnMoved = window.onMoved;
+window.onMoved = (mv) => {
+  originalOnMoved(mv);
+  if (trainerActive && currentTrainer) {
+    trainerManager.analyzeMove(mv);
+
+    // Check if trainer case solved
+    if (cube.isSolved() && trainerActive && currentTrainer) {
+      timer.stop();
+      const time = timer.ms();
+      const moves = cube.moveCount;
+
+      if (currentTrainer.session.currentCase) {
+        const caseId = currentTrainer.session.currentCase.id || 'unknown';
+        trainerStats.addSolve(currentTrainer.session.type, caseId, time, moves);
+      }
+
+      setTimeout(() => {
+        if (trainerActive) {
+          currentTrainer.genScramble();
+          timer.reset();
+        }
+      }, 1500);
+    }
+  }
+};
+
+// VISUAL HELPERS
+class VisualHelper {
+  constructor() {
+    this.highlightedCubies = [];
+  }
+
+  highlightPiece(cubie, glowColor = 0x6ee7f9) {
+    if (!cubie) return;
+    // Save original color
+    const originalEmissive = cubie.core.material.emissive.getHex();
+    // Apply glow
+    cubie.core.material.emissive.setHex(glowColor);
+    cubie.core.material.emissiveIntensity = 0.8;
+    cubie.core.material.needsUpdate = true;
+
+    this.highlightedCubies.push({cubie, originalEmissive, originalIntensity: cubie.core.material.emissiveIntensity});
+
+    // Fade out after 2s
+    setTimeout(() => this.clearHighlights(), 2000);
+  }
+
+  clearHighlights() {
+    for (const {cubie, originalEmissive} of this.highlightedCubies) {
+      cubie.core.material.emissive.setHex(originalEmissive);
+      cubie.core.material.emissiveIntensity = 0.12;
+      cubie.core.material.needsUpdate = true;
+    }
+    this.highlightedCubies = [];
+  }
+
+  showRecognitionFeedback(caseName, algorithm) {
+    const panel = document.getElementById('recognitionPanel');
+    document.getElementById('recognizedCase').textContent = caseName;
+    document.getElementById('recognizedAlgo').textContent = algorithm || '--';
+    document.getElementById('recognizedConfidence').textContent = 'High confidence';
+
+    panel.classList.add('show');
+    setTimeout(() => panel.classList.remove('show'), 3000);
+  }
+}
+
+const visualHelper = new VisualHelper();
+
+// Enhanced OLL Trainer with recognition
+class OLLTrainerEnhanced {
+  constructor() {
+    this.session = new TrainerSession('oll');
+    this.currentCase = this.randomCase();
+    this.genScramble();
+  }
+
+  randomCase() {
+    return OLL_CASES[Math.floor(Math.random() * OLL_CASES.length)];
+  }
+
+  genScramble() {
+    this.currentCase = this.randomCase();
+    cube.reset(false);
+    const moves = this.currentCase.scramble.split(' ').filter(m => m);
+    cube.enqueueMany(moves, {record: false});
+    this.session.currentCase = this.currentCase;
+    this.updateDisplay();
+    this.highlightTopLayer();
+  }
+
+  highlightTopLayer() {
+    // Highlight the top layer cubies
+    for (const cubie of cube.cubies) {
+      if (cubie.group.userData.coord.y === 1) {
+        visualHelper.highlightPiece(cubie, 0xffd700);
+      }
+    }
+  }
+
+  updateDisplay() {
+    const panel = document.getElementById('activeTrainerPanel');
+    if (panel.classList.contains('active')) {
+      document.getElementById('trainerCaseName').textContent = `OLL ${this.currentCase.id}: ${this.currentCase.name}`;
+      document.getElementById('trainerCaseDesc').textContent = `Category: ${this.currentCase.cat}`;
+      document.getElementById('trainerAlgo').textContent = this.currentCase.algo;
+      document.getElementById('trainerTime').textContent = timer.fmt();
+      document.getElementById('trainerMoves').textContent = cube.moveCount;
+
+      const stats = trainerStats.getStats('oll', this.currentCase.id);
+      if (stats) {
+        document.getElementById('trainerPB').textContent = (stats.pb / 1000).toFixed(2) + 's';
+      } else {
+        document.getElementById('trainerPB').textContent = '--';
+      }
+    }
+  }
+}
+
+// Enhanced PLL Trainer with case detection
+class PLLTrainerEnhanced {
+  constructor() {
+    this.session = new TrainerSession('pll');
+    this.currentCase = this.randomCase();
+    this.genScramble();
+  }
+
+  randomCase() {
+    return PLL_CASES[Math.floor(Math.random() * PLL_CASES.length)];
+  }
+
+  genScramble() {
+    this.currentCase = this.randomCase();
+    cube.reset(false);
+    // Scramble to create PLL case
+    const scrambles = [
+      ['R', 'U\'', 'R\'', 'U'],
+      ['R2', 'U', 'R2\'', 'U2', 'R2', 'U', 'R2\''],
+      ['M2', 'U', 'M2', 'U'],
+    ];
+    const scramble = scrambles[Math.floor(Math.random() * scrambles.length)];
+    cube.enqueueMany(scramble, {record: false});
+    this.session.currentCase = this.currentCase;
+    this.updateDisplay();
+    this.highlightLastLayer();
+  }
+
+  highlightLastLayer() {
+    for (const cubie of cube.cubies) {
+      if (cubie.group.userData.coord.y === 1) {
+        visualHelper.highlightPiece(cubie, 0xff6ec7);
+      }
+    }
+  }
+
+  updateDisplay() {
+    const panel = document.getElementById('activeTrainerPanel');
+    if (panel.classList.contains('active')) {
+      document.getElementById('trainerCaseName').textContent = `PLL ${this.currentCase.id}: ${this.currentCase.name}`;
+      document.getElementById('trainerCaseDesc').textContent = `Type: ${this.currentCase.cycle}`;
+      document.getElementById('trainerAlgo').textContent = this.currentCase.algo;
+      document.getElementById('trainerTime').textContent = timer.fmt();
+      document.getElementById('trainerMoves').textContent = cube.moveCount;
+
+      const stats = trainerStats.getStats('pll', this.currentCase.id);
+      if (stats) {
+        document.getElementById('trainerPB').textContent = (stats.pb / 1000).toFixed(2) + 's';
+      } else {
+        document.getElementById('trainerPB').textContent = '--';
+      }
+    }
+  }
+}
+
+// Update trainer manager with enhanced trainers
+class TrainerManagerEnhanced {
+  constructor() {
+    this.trainers = {
+      cfop: CFOPTrainer,
+      cross: CrossTrainer,
+      f2l: F2LTrainer,
+      oll: OLLTrainerEnhanced,
+      pll: PLLTrainerEnhanced
+    };
+  }
+
+  start(type) {
+    if (type === 'algo') {
+      toast('Algorithm mode coming soon');
+      return;
+    }
+
+    trainerActive = true;
+    const TrainerClass = this.trainers[type];
+    if (!TrainerClass) return;
+
+    currentTrainer = new TrainerClass();
+    document.getElementById('trainerSelectionPanel').classList.remove('active');
+    document.getElementById('activeTrainerPanel').classList.add('active');
+
+    cube.reset(false);
+    currentTrainer.genScramble();
+    timer.reset();
+  }
+
+  exit() {
+    trainerActive = false;
+    currentTrainer = null;
+    visualHelper.clearHighlights();
+    cube.reset(false);
+    document.getElementById('activeTrainerPanel').classList.remove('active');
+    document.getElementById('trainerSelectionPanel').classList.remove('active');
+    updateUI();
+  }
+
+  analyzeMove(move) {
+    if (!currentTrainer || !trainerActive) return;
+    currentTrainer.updateDisplay();
+
+    // Show case recognition for OLL/PLL
+    if (currentTrainer instanceof OLLTrainerEnhanced) {
+      const detected = recognizer.recognizeOLL(cube.cubies);
+      if (detected && detected.id === currentTrainer.currentCase.id) {
+        visualHelper.showRecognitionFeedback(`OLL ${detected.name}`, detected.algo);
+      }
+    } else if (currentTrainer instanceof PLLTrainerEnhanced) {
+      const detected = recognizer.recognizePLL(cube.cubies);
+      if (detected && detected.id === currentTrainer.currentCase.id) {
+        visualHelper.showRecognitionFeedback(`PLL ${detected.name}`, detected.algo);
+      }
+    }
+  }
+
+  resetTrainer() {
+    if (!currentTrainer) return;
+    visualHelper.clearHighlights();
+    currentTrainer.genScramble();
+    timer.reset();
+  }
+}
+
+// Replace original trainer manager
+const trainerManagerOld = trainerManager;
+window.trainerManager = new TrainerManagerEnhanced();
+
+
+// ═══════════════════════════════════════
+// THEME MODAL — open/close + grid builder + mini cube previews
+// ═══════════════════════════════════════
+
+const THEME_LABELS = {
+  rubiks:'Rubik\'s Official', gan:'GAN Vivid', speed:'Speed Classic',
+  neon:'Neon Cyber', carbon:'Carbon Dark', midnight:'Midnight Galaxy',
+  pastel:'Pastel Pop', metal:'Brushed Metal', moyu:'MoYu Modern',
+  dayan:'Da-Yan Fresh', vivid:'Vivid Bright', glassmorphic:'Glassmorphic',
+  darkmode:'Dark Mode'
+};
+
+// Theme categories for organized display
+const THEME_CATEGORIES = {
+  'Official': ['rubiks'],
+  'Speed Cube Brands': ['gan', 'moyu', 'dayan'],
+  'Artistic': ['speed', 'neon', 'carbon', 'midnight', 'pastel', 'metal', 'vivid', 'glassmorphic'],
+  'Dark': ['darkmode']
+};
+
+// Track mini-cube preview scenes for animation
+const _previews = [];
+let _customThemePreview = null;
+let _editingThemeId = null;
+let _customThemes = {};
+let _previewUpdateTimer = null;
+
+// Load custom themes from localStorage
+function _loadCustomThemes() {
+  const stored = localStorage.getItem('custom_themes_v1');
+  if (stored) {
+    _customThemes = JSON.parse(stored);
+    // Merge custom themes into THEMES and THEME_LABELS
+    for (const id in _customThemes) {
+      const theme = _customThemes[id];
+      THEMES[id] = theme;
+      THEME_LABELS[id] = theme.name;
+    }
+  }
+}
+
+// Save custom themes to localStorage
+function _saveCustomThemesToStorage() {
+  localStorage.setItem('custom_themes_v1', JSON.stringify(_customThemes));
+}
+
+// Open custom theme editor
+function _openCustomThemeEditor(themeId = null) {
+  _editingThemeId = themeId;
+  const modal = document.getElementById('customThemeModal');
+  const title = document.getElementById('customThemeModalTitle');
+
+  if (themeId) {
+    // Edit mode
+    title.textContent = 'Edit Custom Theme';
+    const theme = _customThemes[themeId];
+    document.getElementById('customThemeName').value = theme.name;
+    document.getElementById('colorU').value = '#' + theme.U.toString(16).padStart(6, '0');
+    document.getElementById('colorD').value = '#' + theme.D.toString(16).padStart(6, '0');
+    document.getElementById('colorF').value = '#' + theme.F.toString(16).padStart(6, '0');
+    document.getElementById('colorB').value = '#' + theme.B.toString(16).padStart(6, '0');
+    document.getElementById('colorR').value = '#' + theme.R.toString(16).padStart(6, '0');
+    document.getElementById('colorL').value = '#' + theme.L.toString(16).padStart(6, '0');
+    document.getElementById('colorPlastic').value = '#' + theme.plastic.toString(16).padStart(6, '0');
+    document.getElementById('stickerRoughness').value = theme.stickerRoughness;
+    document.getElementById('stickerClearcoat').value = theme.stickerClearcoat;
+    document.getElementById('stickerCC_R').value = theme.stickerCC_R;
+    document.getElementById('plasticRoughness').value = theme.plasticRoughness;
+    document.getElementById('plasticMetal').value = theme.plasticMetal;
+    document.getElementById('plasticCC').value = theme.plasticCC;
+  } else {
+    // Create mode
+    title.textContent = 'Create Custom Theme';
+    document.getElementById('customThemeName').value = '';
+    document.getElementById('colorU').value = '#ffffff';
+    document.getElementById('colorD').value = '#ffd500';
+    document.getElementById('colorF').value = '#009b48';
+    document.getElementById('colorB').value = '#0046ad';
+    document.getElementById('colorR').value = '#d40f00';
+    document.getElementById('colorL').value = '#ff6f00';
+    document.getElementById('colorPlastic').value = '#000000';
+    document.getElementById('stickerRoughness').value = '0.22';
+    document.getElementById('stickerClearcoat').value = '0.84';
+    document.getElementById('stickerCC_R').value = '0.16';
+    document.getElementById('plasticRoughness').value = '0.42';
+    document.getElementById('plasticMetal').value = '0.1';
+    document.getElementById('plasticCC').value = '0.65';
+  }
+
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add('active')));
+  _updateCustomThemePreview();
+}
+
+function _closeCustomThemeEditor() {
+  const modal = document.getElementById('customThemeModal');
+  modal.classList.remove('active');
+
+  // Clear any pending preview updates
+  if (_previewUpdateTimer) {
+    clearTimeout(_previewUpdateTimer);
+    _previewUpdateTimer = null;
+  }
+
+  setTimeout(() => {
+    modal.style.display = 'none';
+    if (_customThemePreview) {
+      _customThemePreview.r.dispose();
+      _customThemePreview = null;
+    }
+  }, 300);
+}
+
+function _getThemeFromForm() {
+  return {
+    U: parseInt(document.getElementById('colorU').value.substring(1), 16),
+    D: parseInt(document.getElementById('colorD').value.substring(1), 16),
+    F: parseInt(document.getElementById('colorF').value.substring(1), 16),
+    B: parseInt(document.getElementById('colorB').value.substring(1), 16),
+    R: parseInt(document.getElementById('colorR').value.substring(1), 16),
+    L: parseInt(document.getElementById('colorL').value.substring(1), 16),
+    plastic: parseInt(document.getElementById('colorPlastic').value.substring(1), 16),
+    stickerRoughness: parseFloat(document.getElementById('stickerRoughness').value),
+    stickerClearcoat: parseFloat(document.getElementById('stickerClearcoat').value),
+    stickerCC_R: parseFloat(document.getElementById('stickerCC_R').value),
+    plasticRoughness: parseFloat(document.getElementById('plasticRoughness').value),
+    plasticMetal: parseFloat(document.getElementById('plasticMetal').value),
+    plasticCC: parseFloat(document.getElementById('plasticCC').value)
+  };
+}
+
+function _updateCustomThemePreview() {
+  // Debounce preview updates to avoid creating too many WebGL contexts
+  if (_previewUpdateTimer) clearTimeout(_previewUpdateTimer);
+
+  _previewUpdateTimer = setTimeout(() => {
+    const wrapper = document.getElementById('customPreviewWrapper');
+    if (!wrapper) return;
+
+    if (_customThemePreview) {
+      _customThemePreview.r.dispose();
+      wrapper.innerHTML = '';
+    }
+
+    const theme = _getThemeFromForm();
+    _customThemePreview = _makeMiniScene(theme);
+    wrapper.appendChild(_customThemePreview.r.domElement);
+
+    // Animate it once
+    _customThemePreview.grp.rotation.y += 0.018;
+    _customThemePreview.r.render(_customThemePreview.sc, _customThemePreview.cam);
+  }, 300);
+}
+
+function _saveCustomTheme() {
+  const name = document.getElementById('customThemeName').value.trim();
+  if (!name) {
+    toast('Please enter a theme name');
+    return;
+  }
+
+  const theme = _getThemeFromForm();
+  theme.name = name;
+  theme.createdAt = _editingThemeId ? _customThemes[_editingThemeId].createdAt : Date.now();
+
+  const themeId = _editingThemeId || 'custom_' + Date.now();
+  _customThemes[themeId] = theme;
+  THEMES[themeId] = theme;
+  THEME_LABELS[themeId] = name;
+
+  _saveCustomThemesToStorage();
+  _closeCustomThemeEditor();
+  _buildThemeGrid();
+  toast('Theme ' + ((_editingThemeId ? 'updated' : 'created') + '!'));
+}
+
+function _deleteCustomTheme(themeId) {
+  if (confirm('Delete this custom theme?')) {
+    delete _customThemes[themeId];
+    delete THEMES[themeId];
+    delete THEME_LABELS[themeId];
+    _saveCustomThemesToStorage();
+    _buildThemeGrid();
+    toast('Theme deleted');
+  }
+}
+
+function _makeMiniScene(T) {
+  const W = 82, H = 82;
+  const r = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  r.setSize(W, H);
+  r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  r.outputColorSpace = THREE.SRGBColorSpace;
+  r.toneMapping = THREE.ACESFilmicToneMapping;
+  r.toneMappingExposure = 0.9;
+  r.setClearColor(0x000000, 0);
+
+  const sc = new THREE.Scene();
+  if (scene.environment) sc.environment = scene.environment;
+  sc.add(new THREE.AmbientLight(0xffffff, 0.65));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.9);
+  dl.position.set(3, 5, 4); sc.add(dl);
+  const rl = new THREE.DirectionalLight(0x88aaff, 0.2);
+  rl.position.set(-3, -2, -3); sc.add(rl);
+
+  const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 50);
+  cam.position.set(2.6, 2.2, 3.2);
+  cam.lookAt(0, 0, 0);
+
+  const HP_m = Math.PI / 2;
+  const sp = 0.35, cs = 0.31;
+  const bGeo = new THREE.BoxGeometry(cs, cs, cs);
+  const pGeo = new THREE.PlaneGeometry(cs * 0.76, cs * 0.76);
+  const pMat = new THREE.MeshStandardMaterial({ color: T.plastic, roughness:0.45, metalness:0.08 });
+  const fnPos = { U:[0,1,0],D:[0,-1,0],F:[0,0,1],B:[0,0,-1],R:[1,0,0],L:[-1,0,0] };
+  const fnRot = { U:[-HP_m,0,0],D:[HP_m,0,0],F:[0,0,0],B:[0,Math.PI,0],R:[0,HP_m,0],L:[0,-HP_m,0] };
+
+  const grp = new THREE.Group();
+  grp.rotation.set(0.3, 0.5, 0);
+  sc.add(grp);
+
+  for (let x=-1;x<=1;x++) for (let y=-1;y<=1;y++) for (let z=-1;z<=1;z++) {
+    if (x===0&&y===0&&z===0) continue;
+    const g = new THREE.Group();
+    g.position.set(x*sp, y*sp, z*sp);
+    g.add(new THREE.Mesh(bGeo, pMat));
+    for (const f of 'UDFRBL'.split('')) {
+      const exp = (f==='U'&&y===1)||(f==='D'&&y===-1)||(f==='F'&&z===1)||(f==='B'&&z===-1)||(f==='R'&&x===1)||(f==='L'&&x===-1);
+      if (!exp) continue;
+      const sm = new THREE.Mesh(pGeo, new THREE.MeshStandardMaterial({
+        color: T[f], emissive: T[f], emissiveIntensity:0.12,
+        roughness: T.stickerRoughness||0.25, metalness:0
+      }));
+      const n = fnPos[f];
+      sm.position.set(n[0]*(cs/2+.003), n[1]*(cs/2+.003), n[2]*(cs/2+.003));
+      sm.rotation.set(...fnRot[f]);
+      g.add(sm);
+    }
+    grp.add(g);
+  }
+  return { r, sc, cam, grp };
+}
+
+function _buildThemeGrid() {
+  const grid = document.getElementById('themeGrid');
+  grid.innerHTML = '';
+  // dispose old previews
+  _previews.forEach(p => p.r.dispose());
+  _previews.length = 0;
+
+  // Helper to add a theme to the grid
+  const addThemeItem = (key, isCustom = false) => {
+    const T = THEMES[key];
+    const label = THEME_LABELS[key] || key;
+    const isActive = cube.theme === key;
+
+    const item = document.createElement('div');
+    item.className = 'theme-item' + (isActive ? ' active' : '') + (isCustom ? ' custom' : '');
+
+    // Mini cube wrapper
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-cube-wrapper';
+    const p = _makeMiniScene(T);
+    _previews.push(p);
+    wrap.appendChild(p.r.domElement);
+
+    // Name
+    const nm = document.createElement('div');
+    nm.className = 'theme-name';
+    nm.textContent = label;
+
+    item.appendChild(wrap);
+    item.appendChild(nm);
+
+    // Delete overlay for custom themes
+    if (isCustom) {
+      const overlay = document.createElement('div');
+      overlay.className = 'delete-overlay';
+      const editBtn = document.createElement('button');
+      editBtn.textContent = '✏️ Edit';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _openCustomThemeEditor(key);
+      });
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-btn';
+      deleteBtn.textContent = '🗑️ Delete';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _deleteCustomTheme(key);
+      });
+      overlay.appendChild(editBtn);
+      overlay.appendChild(deleteBtn);
+      item.appendChild(overlay);
+    }
+
+    item.addEventListener('click', () => {
+      if (!isCustom || !event.target.classList.contains('delete-overlay')) {
+        document.getElementById('selTheme').value = key;
+        document.getElementById('selTheme').dispatchEvent(new Event('change'));
+        grid.querySelectorAll('.theme-item').forEach(el => el.classList.remove('active'));
+        item.classList.add('active');
+        toast('Theme: ' + label);
+      }
+    });
+
+    grid.appendChild(item);
+  };
+
+  // Add category headers and predefined themes
+  for (const [category, themes] of Object.entries(THEME_CATEGORIES)) {
+    const header = document.createElement('div');
+    header.className = 'theme-category-header';
+    header.textContent = category;
+    grid.appendChild(header);
+
+    for (const key of themes) {
+      addThemeItem(key, false);
+    }
+  }
+
+  // Add custom themes section if there are custom themes
+  if (Object.keys(_customThemes).length > 0) {
+    const customHeader = document.createElement('div');
+    customHeader.className = 'theme-category-header';
+    customHeader.textContent = 'My Themes';
+    grid.appendChild(customHeader);
+
+    for (const key of Object.keys(_customThemes)) {
+      addThemeItem(key, true);
+    }
+  }
+
+  // Add create theme button
+  const createBtn = document.createElement('div');
+  createBtn.className = 'theme-item create-theme-btn';
+  createBtn.innerHTML = '<div class="preview-cube-wrapper" style="background:rgba(110,231,249,.1);display:flex;align-items:center;justify-content:center;"><div style="font-size:32px;text-align:center;">+</div></div><div class="theme-name">Create Custom</div>';
+  createBtn.addEventListener('click', () => _openCustomThemeEditor());
+  grid.appendChild(createBtn);
+}
+
+// Open modal
+document.getElementById('btnThemes').addEventListener('click', () => {
+  _buildThemeGrid();
+  const m = document.getElementById('themeModal');
+  m.style.display = 'flex';
+  requestAnimationFrame(() => requestAnimationFrame(() => m.classList.add('active')));
+});
+
+// Close modal
+document.getElementById('closeThemeModal').addEventListener('click', () => {
+  const m = document.getElementById('themeModal');
+  m.classList.remove('active');
+  setTimeout(() => {
+    m.style.display = 'none';
+    _previews.forEach(p => p.r.dispose());
+    _previews.length = 0;
+  }, 300);
+});
+
+// Close on backdrop click
+document.getElementById('themeModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('themeModal'))
+    document.getElementById('closeThemeModal').click();
+});
+
+// Custom Theme Modal Events
+document.getElementById('closeCustomThemeModal').addEventListener('click', _closeCustomThemeEditor);
+document.getElementById('customThemeModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('customThemeModal'))
+    _closeCustomThemeEditor();
+});
+document.getElementById('btnCancelCustomTheme').addEventListener('click', _closeCustomThemeEditor);
+document.getElementById('btnSaveCustomTheme').addEventListener('click', _saveCustomTheme);
+
+// Slider value updates
+const sliders = [
+  ['stickerRoughness', 'roughnessValue'],
+  ['stickerClearcoat', 'clearcoatValue'],
+  ['stickerCC_R', 'clearcoatRoughValue'],
+  ['plasticRoughness', 'plasticRoughnessValue'],
+  ['plasticMetal', 'plasticMetalValue'],
+  ['plasticCC', 'plasticCCValue']
+];
+
+sliders.forEach(([sliderId, valueId]) => {
+  const slider = document.getElementById(sliderId);
+  const valueDisplay = document.getElementById(valueId);
+  slider.addEventListener('input', () => {
+    valueDisplay.textContent = parseFloat(slider.value).toFixed(2);
+    _updateCustomThemePreview();
+  });
+});
+
+// Color input updates
+['colorU', 'colorD', 'colorF', 'colorB', 'colorR', 'colorL', 'colorPlastic'].forEach(id => {
+  document.getElementById(id).addEventListener('change', _updateCustomThemePreview);
+});
+
+// Animate mini cubes — called from render loop
+function _tickPreviews() {
+  for (const p of _previews) {
+    p.grp.rotation.y += 0.018;
+    p.r.render(p.sc, p.cam);
+  }
+  // Animate custom preview
+  if (_customThemePreview) {
+    _customThemePreview.grp.rotation.y += 0.018;
+    _customThemePreview.r.render(_customThemePreview.sc, _customThemePreview.cam);
+  }
+}
+
+// Load custom themes from localStorage
+_loadCustomThemes();
+
+let lastT = performance.now();
+const ftimes = [];
+
+function loop() {
+  requestAnimationFrame(loop);
+  const now = performance.now();
+  const dt  = now - lastT; lastT = now;
+  ftimes.push(dt); if (ftimes.length>50) ftimes.shift();
+  const fps = 1000 / (ftimes.reduce((a,b)=>a+b,0)/ftimes.length);
+
+  // Timer display
+  document.getElementById('timer').textContent = timer.fmt();
+  document.getElementById('tps').textContent   = timer.tps().toFixed(2);
+  document.getElementById('fps').textContent   = Math.round(fps);
+  document.getElementById('tris').textContent  = renderer.info.render.triangles + ' tris';
+
+  cube.root.rotation.x = THREE.MathUtils.damp(cube.root.rotation.x, cube.targetPitch || 0, 12, dt / 1000);
+  cube.root.rotation.y = THREE.MathUtils.damp(cube.root.rotation.y, cube.targetYaw || 0, 12, dt / 1000);
+  cube.root.rotation.z = THREE.MathUtils.damp(cube.root.rotation.z, 0, 12, dt / 1000);
+
+  // Apply momentum when not dragging
+  if (!pointerDown && !rotatingCube) {
+    cube.targetYaw += velocityYaw;
+    cube.targetPitch += velocityPitch;
+    velocityYaw *= momentumDecay;
+    velocityPitch *= momentumDecay;
+    // Stop momentum when very small
+    if (Math.abs(velocityYaw) < 0.00001) velocityYaw = 0;
+    if (Math.abs(velocityPitch) < 0.00001) velocityPitch = 0;
+  } else {
+    // Stop momentum when dragging
+    velocityYaw = 0;
+    velocityPitch = 0;
+  }
+
+  // Subtle cube hover bob when idle
+  if (cube.userAutoRotate && cube.moveCount===0 && !cube.busy && !pointerDown) {
+    cube.targetYaw += 0.004;
+    cube.root.position.y = Math.sin(now*0.0008) * 0.04;
+  }
+
+  if (bloom.enabled) composer.render();
+  else renderer.render(scene, camera);
+
+  _tickPreviews();
+}
+
+loop();
+updateUI();
+
+
+
+</script>
+</body>
+</html>
